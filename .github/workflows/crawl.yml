@@ -1,0 +1,47 @@
+name: 補助資料自動更新
+
+on:
+  schedule:
+    # 每 30 分鐘（GitHub 排程使用 UTC；系統內部日期一律以 Asia/Taipei 計算）
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: crawl
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Taipei
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安裝套件
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: 掃描官方網站並更新資料庫
+        id: crawl
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: node crawler/run.mjs
+
+      - name: 來源異常時開立問題單（GitHub 會寄 Email 通知）
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CRAWL_OUTCOME: ${{ steps.crawl.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node .github/scripts/alert.mjs

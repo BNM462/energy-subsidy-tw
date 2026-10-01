@@ -1,0 +1,233 @@
+{
+  "_說明": "中央政府資料來源清單。homepage 用於每日自動探索列表頁；lists 為人工確認的固定入口（每次掃描都會檢查）。只收錄行政院各部會及所屬中央機關。",
+  "sources": [
+    {
+      "id": "ey",
+      "agency": "行政院",
+      "homepage": "https://www.ey.gov.tw/"
+    },
+    {
+      "id": "moi",
+      "agency": "內政部",
+      "homepage": "https://www.moi.gov.tw/"
+    },
+    {
+      "id": "nlma",
+      "agency": "內政部國土管理署",
+      "homepage": "https://www.nlma.gov.tw/",
+      "enabled": false,
+      "note": "網站啟用 Imperva 機器人防護，需真人瀏覽器驗證"
+    },
+    {
+      "id": "abri",
+      "agency": "內政部建築研究所",
+      "homepage": "https://www.abri.gov.tw/"
+    },
+    {
+      "id": "mof",
+      "agency": "財政部",
+      "homepage": "https://www.mof.gov.tw/"
+    },
+    {
+      "id": "edu",
+      "agency": "教育部",
+      "homepage": "https://www.edu.tw/"
+    },
+    {
+      "id": "sports",
+      "agency": "運動部",
+      "homepage": "https://www.sports.gov.tw/"
+    },
+    {
+      "id": "moea",
+      "agency": "經濟部",
+      "homepage": "https://www.moea.gov.tw/"
+    },
+    {
+      "id": "moeaea",
+      "agency": "經濟部能源署",
+      "homepage": "https://www.moeaea.gov.tw/ECW/populace/home/Home.aspx",
+      "lists": [
+        "https://www.moeaea.gov.tw/ECW/populace/news/Board.aspx?kind=3&menu_id=57",
+        "https://www.moeaea.gov.tw/ECW/populace/news/News.aspx?kind=1&menu_id=41",
+        "https://www.moeaea.gov.tw/ECW/populace/content/ContentLink2.aspx?menu_id=8765&sub_menu_id=8783"
+      ]
+    },
+    {
+      "id": "ida",
+      "agency": "經濟部產業發展署",
+      "homepage": "https://www.ida.gov.tw/ctlr?PRO=idx2015&lang=0"
+    },
+    {
+      "id": "sme",
+      "agency": "經濟部中小及新創企業署",
+      "homepage": "https://www.sme.gov.tw/"
+    },
+    {
+      "id": "cda",
+      "agency": "經濟部商業發展署",
+      "homepage": "https://www.aoc.gov.tw/"
+    },
+    {
+      "id": "trade",
+      "agency": "經濟部國際貿易署",
+      "homepage": "https://www.trade.gov.tw/"
+    },
+    {
+      "id": "bsmi",
+      "agency": "經濟部標準檢驗局",
+      "homepage": "https://www.bsmi.gov.tw/"
+    },
+    {
+      "id": "ipa",
+      "agency": "經濟部產業園區管理局",
+      "homepage": "https://www.bip.gov.tw/index.aspx"
+    },
+    {
+      "id": "wra",
+      "agency": "經濟部水利署",
+      "homepage": "https://www.wra.gov.tw/"
+    },
+    {
+      "id": "motc",
+      "agency": "交通部",
+      "homepage": "https://www.motc.gov.tw/"
+    },
+    {
+      "id": "tourism",
+      "agency": "交通部觀光署",
+      "homepage": "https://admin.taiwan.net.tw/"
+    },
+    {
+      "id": "thb",
+      "agency": "交通部公路局",
+      "homepage": "https://www.thb.gov.tw/",
+      "enabled": false,
+      "note": "網站啟用 Imperva 機器人防護，需真人瀏覽器驗證"
+    },
+    {
+      "id": "mol",
+      "agency": "勞動部",
+      "homepage": "https://www.mol.gov.tw/"
+    },
+    {
+      "id": "moa",
+      "agency": "農業部",
+      "homepage": "https://www.moa.gov.tw/"
+    },
+    {
+      "id": "afa",
+      "agency": "農業部農糧署",
+      "homepage": "https://www.afa.gov.tw/"
+    },
+    {
+      "id": "fa",
+      "agency": "農業部漁業署",
+      "homepage": "https://www.fa.gov.tw/"
+    },
+    {
+      "id": "ardswc",
+      "agency": "農業部農村發展及水土保持署",
+      "homepage": "https://www.ardswc.gov.tw/"
+    },
+    {
+      "id": "mohw",
+      "agency": "衛生福利部",
+      "homepage": "https://www.mohw.gov.tw/"
+    },
+    {
+      "id": "moenv",
+      "agency": "環境部",
+      "homepage": "https://www.moenv.gov.tw/",
+      "enabled": false,
+      "note": "環境部網站阻擋所有自動化連線（HTTP 403）；環境部相關節能補助由所屬「氣候變遷署」來源涵蓋"
+    },
+    {
+      "id": "cca",
+      "agency": "環境部氣候變遷署",
+      "homepage": "https://www.cca.gov.tw/"
+    },
+    {
+      "id": "moc",
+      "agency": "文化部",
+      "homepage": "https://www.moc.gov.tw/"
+    },
+    {
+      "id": "moda",
+      "agency": "數位發展部",
+      "homepage": "https://moda.gov.tw/"
+    },
+    {
+      "id": "ndc",
+      "agency": "國家發展委員會",
+      "homepage": "https://www.ndc.gov.tw/"
+    },
+    {
+      "id": "nstc",
+      "agency": "國家科學及技術委員會",
+      "homepage": "https://www.nstc.gov.tw/"
+    },
+    {
+      "id": "sipa",
+      "agency": "國家科學及技術委員會新竹科學園區管理局",
+      "homepage": "https://www.sipa.gov.tw/"
+    },
+    {
+      "id": "ctsp",
+      "agency": "國家科學及技術委員會中部科學園區管理局",
+      "homepage": "https://www.ctsp.gov.tw/"
+    },
+    {
+      "id": "stsp",
+      "agency": "國家科學及技術委員會南部科學園區管理局",
+      "homepage": "https://www.stsp.gov.tw/"
+    },
+    {
+      "id": "oac",
+      "agency": "海洋委員會",
+      "homepage": "https://www.oac.gov.tw/"
+    },
+    {
+      "id": "vac",
+      "agency": "國軍退除役官兵輔導委員會",
+      "homepage": "https://www.vac.gov.tw/"
+    },
+    {
+      "id": "cip",
+      "agency": "原住民族委員會",
+      "homepage": "https://www.cip.gov.tw/"
+    },
+    {
+      "id": "hakka",
+      "agency": "客家委員會",
+      "homepage": "https://www.hakka.gov.tw/"
+    },
+    {
+      "id": "pcc",
+      "agency": "行政院公共工程委員會",
+      "homepage": "https://www.pcc.gov.tw/"
+    },
+    {
+      "id": "fsc",
+      "agency": "金融監督管理委員會",
+      "homepage": "https://www.fsc.gov.tw/"
+    },
+    {
+      "id": "mnd",
+      "agency": "國防部",
+      "homepage": "https://www.mnd.gov.tw/",
+      "enabled": false,
+      "note": "國防部 robots.txt 禁止爬蟲，依規範不抓取"
+    },
+    {
+      "id": "moj",
+      "agency": "法務部",
+      "homepage": "https://www.moj.gov.tw/"
+    },
+    {
+      "id": "mofa",
+      "agency": "外交部",
+      "homepage": "https://www.mofa.gov.tw/"
+    }
+  ]
+}

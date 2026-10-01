@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中央政府節能補助資訊網</title>
+  <meta name="description" content="自動彙整行政院各部會及所屬機關當年度公告的節能、能源效率相關補助，每 30 分鐘檢查官方網站更新。">
+  <meta name="theme-color" content="#0b5d57">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到主要內容</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M18 5 9 18h6l-2 9 10-14h-6l1-8Z" fill="#fff"/></svg>
+        <div>
+          <h1>中央政府節能補助資訊網</h1>
+          <p class="tagline">自動彙整行政院各部會當年度節能相關補助</p>
+        </div>
+      </div>
+      <dl class="clock" aria-live="off">
+        <div><dt>現在時間</dt><dd id="now">----/--/-- --:--:--</dd></div>
+        <div><dt>更新時間</dt><dd id="updated">----/--/--</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <p class="notice">本網站自動彙整中央政府公開資訊，實際申請資格、期限及補助內容仍以各主管機關最新官方公告為準。</p>
+
+    <section class="filters" aria-label="篩選">
+      <div class="filter-group" role="group" aria-labelledby="f-status-label">
+        <span id="f-status-label" class="filter-label">補助狀態</span>
+        <div class="chips" id="f-status"></div>
+      </div>
+      <div class="filter-row">
+        <label class="select-field">
+          <span class="filter-label">主辦機關</span>
+          <select id="f-agency"><option value="">全部</option></select>
+        </label>
+        <label class="select-field">
+          <span class="filter-label">補助對象類型</span>
+          <select id="f-target"><option value="">全部</option></select>
+        </label>
+        <button type="button" class="btn-reset" id="f-reset">全部</button>
+      </div>
+    </section>
+
+    <div class="summary-bar" id="summary" aria-live="polite"></div>
+
+    <section id="list" class="cards" aria-label="補助清單">
+      <div class="state-msg">資料載入中…</div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="views" id="site-views">累積瀏覽：— 次</p>
+      <p>資料範圍：行政院各部會及所屬中央機關公告之節能、能源效率相關補助（不含地方政府、國營事業、法人自辦方案）。系統每 30 分鐘自動檢查官方網站。</p>
+      <p>本網站自動彙整中央政府公開資訊，實際申請資格、期限及補助內容仍以各主管機關最新官方公告為準。</p>
+      <p class="muted">隱私說明：本站不使用追蹤 Cookie。智慧小幫手為防止濫用，僅以每日變動的匿名雜湊碼計算提問次數，不保存原始 IP。</p>
+    </div>
+  </footer>
+
+  <button type="button" class="chat-fab" id="chat-open" aria-haspopup="dialog" aria-controls="chat">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 10h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>智慧小幫手</span>
+  </button>
+
+  <section class="chat" id="chat" role="dialog" aria-modal="false" aria-labelledby="chat-title" hidden>
+    <header class="chat-head">
+      <div>
+        <h2 id="chat-title">節能補助智慧小幫手</h2>
+        <p class="chat-note">智慧小幫手每位使用者每日可提問 5 次。<span id="chat-remaining"></span></p>
+      </div>
+      <button type="button" class="icon-btn" id="chat-close" aria-label="關閉">✕</button>
+    </header>
+    <div class="chat-log" id="chat-log" aria-live="polite">
+      <div class="msg bot">您好！我只會根據本站目前收錄的補助資料回答。例如：<div class="examples" id="chat-examples"></div></div>
+    </div>
+    <form class="chat-form" id="chat-form">
+      <label class="sr-only" for="chat-input">輸入問題</label>
+      <textarea id="chat-input" rows="2" maxlength="200" placeholder="輸入您的問題（200 字以內）" required></textarea>
+      <button type="submit" class="btn-primary" id="chat-send">送出</button>
+    </form>
+    <p class="chat-foot">回答僅供參考，請以主管機關官方公告為準。請勿輸入個人資料。</p>
+  </section>
+</body>
+</html>

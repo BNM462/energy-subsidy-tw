@@ -1,0 +1,21 @@
+# Cloudflare Pages 設定（免費方案）
+# 密鑰（GEMINI_API_KEY、INGEST_TOKEN、ASK_HASH_SECRET）不寫在這裡，存放於 Cloudflare 加密 Secret。
+name = "energy-subsidy-tw"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Gemini 模型（Google AI Studio 免費方案可用的穩定版；下架時改這裡或改備援模型）
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+GEMINI_FALLBACK_MODEL = "gemini-3.6-flash"
+# 智慧小幫手：每人每日次數、全站每日上限（保護免費額度）
+ASK_DAILY_LIMIT = "5"
+ASK_GLOBAL_DAILY_LIMIT = "500"
+# 允許呼叫 POST API 的網站來源
+ALLOWED_ORIGINS = "https://energy-subsidy-tw.pages.dev,https://*.energy-subsidy-tw.pages.dev,http://localhost:8788,http://127.0.0.1:8788"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "energy-subsidy-db"
+database_id = "cf1c9eff-3004-467b-b707-cea2fd2ca4d4"
+migrations_dir = "migrations"

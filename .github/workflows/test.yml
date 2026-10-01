@@ -1,0 +1,28 @@
+name: 自動化測試
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --omit=dev --ignore-scripts
+      - name: 單元測試（日期、狀態、排序、去重、擷取、安全）
+        run: npm test
+      - name: 確認程式碼中沒有 API Key
+        run: |
+          if grep -rEn "AIza[0-9A-Za-z_-]{30,}" --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "發現疑似 Google API Key，請移除！"; exit 1
+          fi

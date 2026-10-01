@@ -1,0 +1,30 @@
+{
+  "name": "energy-subsidy-tw",
+  "private": true,
+  "type": "module",
+  "description": "中央政府節能補助資訊網：自動彙整行政院各部會節能相關補助",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "crawl": "node crawler/run.mjs",
+    "crawl:dry": "node crawler/run.mjs --dry-run",
+    "dev": "wrangler pages dev public --d1 DB --port 8788",
+    "db:migrate:local": "wrangler d1 migrations apply energy-subsidy-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply energy-subsidy-db --remote",
+    "deploy": "wrangler pages deploy public --project-name energy-subsidy-tw --branch main"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "fflate": "^0.8.3",
+    "unpdf": "^1.8.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.145.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260930.2": true
+  }
+}

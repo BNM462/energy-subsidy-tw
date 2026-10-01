@@ -1,0 +1,5 @@
+{
+  "_說明": "人工修正：永久覆寫被錯誤辨識的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）或官方網址。可覆寫欄位：title, agency, announce_date, apply_start, apply_end, apply_end_time, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_types, amount_text, amount_details, summary, content, official_url, hidden。日期格式 YYYY-MM-DD（西元）。",
+  "_範例": { "target": "a1b2c3d4e5f6", "set": { "apply_end": "2026-11-30", "amount_text": "最高新臺幣 500 萬元" }, "note": "官方 PDF 截止日與網頁不同，以 PDF 為準" },
+  "overrides": []
+}

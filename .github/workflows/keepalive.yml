@@ -1,0 +1,41 @@
+name: 排程保持啟用
+
+# GitHub 公開專案 60 天沒有活動會自動停用排程。
+# 這裡每週檢查一次：距離上次 commit 超過 21 天才更新 heartbeat.txt（約每 3 週一次，不會產生大量無意義 commit）。
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 必要時更新 heartbeat
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          days=$(( (now - last) / 86400 ))
+          echo "距離上次 commit：${days} 天"
+          if [ "$days" -ge 21 ]; then
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > heartbeat.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add heartbeat.txt
+            git commit -m "chore: heartbeat（保持排程啟用）"
+            git push
+          fi
+
+      - name: 確保爬蟲排程為啟用狀態
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable crawl.yml || true
