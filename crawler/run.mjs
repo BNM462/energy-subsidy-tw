@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fetchPage, fetchResource, mapLimit } from './lib/fetcher.mjs';
 import { discoverListPages, SUBSIDY_ZONE_TEXT, sameAgency } from './lib/discover.mjs';
-import { extractListLinks, extractMain } from './lib/html.mjs';
+import { extractListLinks, extractMain, findNextPage } from './lib/html.mjs';
 import { classify, titleWorthFetching } from './lib/classify.mjs';
 import { extractFields } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
@@ -23,11 +23,13 @@ const RECHECK_SUBSIDY_MS = 6 * HOUR;
 const RETRY_ERROR_MS = 2 * HOUR;
 const DISCOVERY_MS = 24 * HOUR;
 const MAX_DETAIL_PER_RUN = 150;
+const MAX_BACKFILL_PAGES = 6;
 const DEAD_AFTER_FAILS = 3;
 const TIME_BUDGET_MS = 17 * 60e3;
 
 const args = new Set(process.argv.slice(2));
 const DRY = args.has('--dry-run');
+const FORCE_DISCOVERY = args.has('--rediscover') || process.env.FORCE_DISCOVERY === '1';
 const API_BASE = (process.env.API_BASE || '').replace(/\/$/, '');
 const TOKEN = process.env.INGEST_TOKEN || '';
 const OUT_DIR = new URL('./out/', import.meta.url);
@@ -130,7 +132,7 @@ async function main() {
     let anyOk = false;
     const errs = [];
     // 每日重新探索列表頁
-    const needDiscovery = !prev?.discovered_at || now - Date.parse(prev.discovered_at) > DISCOVERY_MS || !(prev.discovered_lists || []).length;
+    const needDiscovery = FORCE_DISCOVERY || !prev?.discovered_at || now - Date.parse(prev.discovered_at) > DISCOVERY_MS || !(prev.discovered_lists || []).length;
     if (needDiscovery) {
       try {
         const home = await fetchPage(src.homepage);
@@ -157,14 +159,24 @@ async function main() {
 
     for (const listUrl of lists) {
       try {
-        const page = await fetchPage(listUrl);
+        let page = await fetchPage(listUrl);
         anyOk = true;
-        for (const l of extractListLinks(page.text, page.url)) {
-          if (!(sameAgency(l.url, src.homepage) || isGovUrl(l.url))) continue;
-          if (excludedTargets.has(l.url)) continue;
-          if (!titleWorthFetching(l.title)) continue;
-          if (l.date && l.date < minDate) continue;
-          if (!candidates.has(l.url)) candidates.set(l.url, { ...l, source: src });
+        // 平常只看第 1 頁；每日探索時往後翻頁，補齊今年較早的公告（含已截止）
+        const maxPages = needDiscovery ? MAX_BACKFILL_PAGES : 1;
+        for (let p = 1; p <= maxPages; p++) {
+          const links = extractListLinks(page.text, page.url);
+          for (const l of links) {
+            if (!(sameAgency(l.url, src.homepage) || isGovUrl(l.url))) continue;
+            if (excludedTargets.has(l.url)) continue;
+            if (!titleWorthFetching(l.title)) continue;
+            if (l.date && l.date < minDate) continue;
+            if (!candidates.has(l.url)) candidates.set(l.url, { ...l, source: src });
+          }
+          const dated = links.filter((l) => l.date);
+          const reachedOld = dated.length && dated.every((l) => l.date < minDate);
+          const next = p < maxPages && !reachedOld && findNextPage(page.text, page.url);
+          if (!next) break;
+          page = await fetchPage(next);
         }
       } catch (e) {
         errs.push(`${listUrl.slice(0, 80)}：${e.message}`);

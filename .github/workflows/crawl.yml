@@ -5,6 +5,11 @@ on:
     # 每 30 分鐘（GitHub 排程使用 UTC；系統內部日期一律以 Asia/Taipei 計算）
     - cron: '7,37 * * * *'
   workflow_dispatch:
+    inputs:
+      rediscover:
+        description: '重新探索所有來源並往前翻頁補齊今年資料'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -36,6 +41,7 @@ jobs:
         env:
           API_BASE: ${{ vars.API_BASE }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          FORCE_DISCOVERY: ${{ inputs.rediscover && '1' || '0' }}
         run: node crawler/run.mjs
 
       - name: 來源異常時開立問題單（GitHub 會寄 Email 通知）

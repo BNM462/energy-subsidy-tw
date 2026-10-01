@@ -85,6 +85,20 @@ export function extractListLinks(html, baseUrl) {
   return [...out.values()];
 }
 
+/** 列表頁的「下一頁」連結（javascript postback 無法跟隨時回傳 null） */
+export function findNextPage(html, baseUrl) {
+  const $ = load(html);
+  let next = null;
+  $('a[href]').each((_, a) => {
+    if (next) return;
+    const label = `${$(a).text()} ${$(a).attr('title') || ''} ${$(a).attr('aria-label') || ''}`.replace(/\s+/g, '');
+    if (!/^(下一頁|下頁|次頁|Next|›|»)/i.test(label) && !/(下一頁|下頁|次頁)/.test($(a).attr('title') || '')) return;
+    const url = absUrl($(a).attr('href'), baseUrl);
+    if (url && url !== baseUrl) next = url;
+  });
+  return next;
+}
+
 /** 判斷文字中中文字比例，用來挑出內文主體 */
 function cjkCount(s) {
   const m = s.match(/[一-鿿]/g);
