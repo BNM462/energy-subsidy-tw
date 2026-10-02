@@ -1,5 +1,74 @@
 {
-  "_說明": "人工修正：永久覆寫被錯誤辨識的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）或官方網址。可覆寫欄位：title, agency, announce_date, apply_start, apply_end, apply_end_time, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_types, amount_text, amount_details, summary, content, official_url, hidden。日期格式 YYYY-MM-DD（西元）。",
+  "_說明": "人工修正：永久覆寫被錯誤辨識或需要精簡呈現的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）或官方網址。可覆寫欄位：title, display_title（卡片顯示名稱）, agency, announce_date, apply_start, apply_end, apply_end_time, period_text（卡片上的期間文字）, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_points（補助對象條列）, target_types（服務業/工業/機關學校/醫院／長照/農業/民眾）, amount_text, amount_details, summary（補助重點 1~2 句）, content, official_url, ongoing, hidden。日期格式 YYYY-MM-DD（西元）。所有文字須依官方原文整理，不得加入官方未載明的條件。",
   "_範例": { "target": "a1b2c3d4e5f6", "set": { "apply_end": "2026-11-30", "amount_text": "最高新臺幣 500 萬元" }, "note": "官方 PDF 截止日與網頁不同，以 PDF 為準" },
-  "overrides": []
+  "overrides": [
+    {
+      "target": "https://www.cca.gov.tw/information-service/subsidy/35420.html",
+      "set": {
+        "apply_end": "2026-11-30",
+        "period_text": "2026/09/08 ～ 11/30（第一、二類至 10/15）",
+        "deadline_text": "第一類及第二類申請單位即日起至115年10月15日；第三類申請單位即日起至115年11月30日",
+        "summary": "補助冷卻設備汰換搭配能源管理系統、儲冰蓄冷等冷卻創新示範，以及高溫脆弱照顧場所的冷卻節能改善，分三類申請。",
+        "target_points": [
+          "第一、二類：法人（醫院、學校、旅館、商辦、機關、工廠、農產品經營者）",
+          "第三類：老人福利、長照、身障日照／住宿等高溫脆弱族群照顧場所"
+        ]
+      },
+      "note": "官方公告第三類受理至 115/11/30，與第一、二類（115/10/15）不同"
+    },
+    {
+      "target": "https://www.moeaea.gov.tw/ECW/populace/news/Board.aspx?kind=3&menu_id=57&news_id=34581",
+      "set": {
+        "summary": "獎勵節能服務業（ESCO）辦理節電專案。",
+        "target": "節能服務業（申請文件須含僱用 2 名以上全職節能績效量測與驗證工程師證明等）",
+        "target_types": ["服務業"]
+      },
+      "note": "依公告及附件申請書整理"
+    },
+    {
+      "target": "https://ea01.moeaea.gov.tw/e0409/Page/ProjectExecution.aspx#row-%5B%E9%87%8D%E8%A6%81%5D116%E5%B9%B4%E3%80%8C%E7%AF%80%E8%83%BD%E7%B8%BE%E6%95%88%E4%BF%9D%E8%AD%89%E5%B0%88%E6%A1%88%E7%A4%BA%E7%AF%84%E6%8E%A8%E5%BB%A3%E8%A3%9C%E5%8A%A9%E3%80%8D%E7%94%B3%E8%AB%8B%E8%B3%87%E6%96%99%E4%B8%8B%E8%BC%89",
+      "set": {
+        "summary": "以節能績效保證（ESCO）方式改善設備，用節省的能源費用分期支付工程費（有省錢才付費），節能率須達 10% 以上。",
+        "target_points": [
+          "依法設立登記之法人、醫療機構、機關、學校",
+          "單一申請單位契約容量 100kW 以上，或集團整合累計 500kW 以上"
+        ],
+        "amount_details": [
+          "單一申請：補助上限 500 萬元",
+          "集團申請：補助上限 1,500 萬元",
+          "補助比例：非中小企業 20%～30%、中小企業 30%～40%（依是否為優先改善項目）"
+        ]
+      },
+      "note": "依能源署節能績效保證示範推廣補助專區整理"
+    },
+    {
+      "target": "https://www.essc.org.tw/subsidy/news/news_ct.aspx?p0=53",
+      "set": {
+        "summary": "商業服務業與能源技術服務業者（ESCO）合作進行系統節能改善，節能率須達 10% 以上。",
+        "target": "營利事業（稅籍營業項目符合附件一）或附件二所列事業，契約用電容量合計達 100 瓩以上；設有分支機構者以總機構申請",
+        "amount_details": ["補助款以計畫總經費三分之一為限", "每案補助款上限 500 萬元"]
+      },
+      "note": "依商業服務業節能設備補助網站「系統節能專案補助申請懶人包」整理"
+    },
+    {
+      "target": "https://www.essc.org.tw/subsidy/news/news_ct.aspx?p0=49",
+      "set": {
+        "summary": "商業服務業汰換能效 1 級空調、電冰箱、冷凍櫃、熱泵熱水器、瓦斯爐或 LED 照明，補助購置金額 50%（各設備有上限）。",
+        "target_points": [
+          "營利事業：稅籍營業項目屬附件一所列服務業（如住宿餐飲、批發零售、醫療保健、教育等）",
+          "附件二所列事業：醫事機構、托嬰中心、長照機構、學校、民宿、政府機關等",
+          "改善場域不得為製造工廠（取得有效觀光工廠標章者除外）"
+        ],
+        "target_types": ["服務業", "機關學校", "醫院／長照"]
+      },
+      "note": "依商業服務業節能設備補助網站「設備汰換補助懶人包」整理"
+    },
+    {
+      "target": "https://www.moeaea.gov.tw/ECW/populace/news/Board.aspx?kind=3&menu_id=57&news_id=34327",
+      "set": {
+        "summary": "民眾汰換老舊冷氣、冰箱為節能新品，每臺可申請補助。"
+      },
+      "note": "依經濟部公告及申請表整理"
+    }
+  ]
 }

@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fetchPage, fetchResource, mapLimit } from './lib/fetcher.mjs';
 import { discoverListPages, SUBSIDY_ZONE_TEXT, sameAgency } from './lib/discover.mjs';
 import { extractListLinks, extractMain, findNextPage, extractRowDocs } from './lib/html.mjs';
-import { classify, titleWorthFetching } from './lib/classify.mjs';
+import { classify, titleWorthFetching, energySignals } from './lib/classify.mjs';
 import { extractFields } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
 import { dedupeKey, idFromKey, findMatch, sha1 } from './lib/dedupe.mjs';
@@ -16,7 +16,7 @@ import { normalizeText, toAdYear } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '4';
+const EXTRACTOR_VERSION = '5';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;
@@ -45,6 +45,7 @@ const readJson = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'ut
 const { sources } = readJson('./config/sources.json');
 const overridesCfg = readJson('./config/manual_overrides.json').overrides || [];
 const exclusionsCfg = readJson('./config/exclusions.json').exclusions || [];
+const programsCfg = readJson('./config/programs.json').programs || [];
 const excludedTargets = new Set(exclusionsCfg.map((x) => x.target));
 
 // ---------- 狀態 ----------
@@ -210,6 +211,13 @@ async function main() {
     log(`${anyOk ? '✔' : '✖'} ${src.agency}（列表 ${lists.length}）${res.error ? ' ⚠ ' + res.error.slice(0, 80) : ''}`);
   });
 
+  // 重點補助監測清單：固定追蹤的計畫頁
+  for (const pg of programsCfg) {
+    const url = pg.pages[0];
+    const src = { id: `program:${pg.id}`, agency: pg.agency, delegate: pg.delegate, homepage: url };
+    candidates.set(url, { url, title: pg.title, date: null, source: src, program: pg });
+  }
+
   // 已知補助的官方網址也定期複查（狀態變更、網址失效）
   for (const s of subsidies.values()) {
     if (s.year < year - 1 || !s.official_url || candidates.has(s.official_url)) continue;
@@ -267,9 +275,13 @@ async function main() {
     if (st && st.content_hash === hash && st.verdict !== 'error') return; // 內容沒變
     rec.content_hash = hash;
 
-    const title = pickTitle(c.title, main);
-    let cls = classify({ title, text: main.text });
+    const title = c.program ? c.program.title : pickTitle(c.title, main);
+    // 重點監測清單的計畫已由人工確認為節能補助，不需再判斷
+    let cls = c.program
+      ? { isSubsidy: true, reason: '重點補助監測清單', signals: energySignals(main.text) }
+      : classify({ title, text: main.text });
     let attText = '';
+    if (c.program?.docs?.length) attText = await attachmentsText(c.program.docs.map((url) => ({ url, label: url })));
     // 內文很短（詳見附件）時，讀附件再判斷一次
     if (!cls.isSubsidy && titleWorthFetching(title) && main.text.replace(/\s/g, '').length < 600 && main.attachments.length) {
       attText = await attachmentsText(main.attachments);
@@ -286,7 +298,7 @@ async function main() {
     if (!attText && main.attachments.length) attText = await attachmentsText(main.attachments);
     const f = extractFields({ title, text: main.text, listDate: c.date, attachmentText: attText });
     // 公告年度：公告日期 → 列表日期 → 標題明寫的年度（如「115年度」）；都沒有就是未知（不顯示在當年度清單，但保留資料）
-    const ty = /(?<!\d)(\d{2,3})\s*年度/.exec(normalizeText(title));
+    const ty = /(?<!\d)(\d{2,3})\s*年度/.exec(normalizeText(`${title} ${main.heading || ''} ${main.pageTitle || ''}`));
     const docYear = f.announce_date ? +f.announce_date.slice(0, 4) : c.date ? +c.date.slice(0, 4) : ty ? toAdYear(ty[1]) : null;
     rec.verdict = 'subsidy';
     rec.reason = cls.signals.join('、').slice(0, 200);
@@ -299,7 +311,7 @@ async function main() {
         ...f,
         delegate: c.source.delegate || f.delegate,
         official_url: c.url,
-        source_urls: [c.url],
+        source_urls: c.program ? c.program.pages : [c.url],
         attachments: main.attachments.slice(0, 10),
         signals: cls.signals,
         content: main.text.slice(0, 8000),
@@ -421,7 +433,15 @@ async function main() {
     sources: sourceResults,
     urls: urlUpdates,
     upserts: [...upserts.values()],
-    overrides: overridesCfg.filter((o) => o && o.target && o.set).map((o) => ({ target: o.target, set: o.set, note: o.note || null })),
+    overrides: [
+      // 重點補助監測清單的固定顯示文字（依官方原文整理），以官方網址對應
+      ...programsCfg.map((pg) => ({
+        target: pg.pages[0],
+        set: { display_title: pg.title, ongoing: !!pg.ongoing, ...(pg.fields || {}) },
+        note: '重點補助監測清單',
+      })),
+      ...overridesCfg.filter((o) => o && o.target && o.set).map((o) => ({ target: o.target, set: o.set, note: o.note || null })),
+    ],
     exclusions: exclusionsCfg.filter((x) => x && x.target).map((x) => ({ target: x.target, note: x.note || null })),
     data_changed: dataChanged,
   };

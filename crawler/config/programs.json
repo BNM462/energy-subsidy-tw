@@ -1,0 +1,63 @@
+{
+  "_說明": "重點補助監測清單：沒有一般公告列表、或需要固定追蹤的重要節能補助。爬蟲每 6 小時讀取 pages[0]（及 docs 官方附件）自動更新期程與狀態（例如官方宣告經費用罄）。fields 為依官方原文整理的固定顯示文字（不使用 AI 即時生成），官方內容變更時請請 AI 協助更新。ongoing=true 表示常態／多年期辦理，即使不是今年公告，在受理期間內也會顯示。",
+  "programs": [
+    {
+      "id": "tax-energy-appliance",
+      "agency": "財政部",
+      "title": "購買節能電器退還減徵貨物稅",
+      "pages": [
+        "https://www.etax.nat.gov.tw/etwmain/tax-info/purchase-energy-saving-appliance-reduced-commodity-tax-refund-area"
+      ],
+      "docs": [
+        "https://www.etax.nat.gov.tw/etwmain/attachments/ZYj5VMq"
+      ],
+      "ongoing": true,
+      "fields": {
+        "summary": "購買能源效率第 1、2 級的新電冰箱、冷（暖）氣機或除濕機，可向國稅局申請退還減徵的貨物稅。",
+        "amount_text": "每台最高退還新臺幣 2,000 元（依品項與容量級距不同）",
+        "amount_details": [
+          "電冰箱：500／1,200／2,000 元（依有效內容積級距）",
+          "冷（暖）氣機：1,600／2,000 元（依額定冷氣能力級距）",
+          "除濕機：500／900／1,200 元（依額定除濕能力級距）"
+        ],
+        "target": "購買符合規定新電冰箱、冷（暖）氣機或除濕機（非供銷售且無退換貨）之買受人",
+        "target_types": [
+          "民眾"
+        ],
+        "deadline_text": "適用購買期間 108/6/15～118/12/31；應於發票或收據交易日期之次日起 6 個月內申請"
+      }
+    },
+    {
+      "id": "iso50001-demo",
+      "agency": "經濟部能源署",
+      "delegate": "財團法人台灣綠色生產力基金會",
+      "title": "ISO 50001 能源管理系統與碳盤查示範輔導",
+      "pages": [
+        "https://www.tgpf.org.tw/event/even-115011901.htm"
+      ],
+      "fields": {
+        "summary": "協助服務業用戶建置 ISO 50001 能源管理系統並完成碳盤查，可委託執行單位或自選合格輔導單位進行輔導。",
+        "target": "服務業部門依法設立登記滿 2 年且持續營運、未曾取得 ISO 50001 驗證之用戶（一般用戶：契約容量 500kW 以上；企業集團用戶：2 處以上營業據點）",
+        "target_types": [
+          "服務業"
+        ],
+        "apply_start": null,
+        "apply_end": null,
+        "deadline_text": "執行期程：自輔導計畫通過申請日起至115年12月31日止（申請截止日請見官方公告）"
+      }
+    },
+    {
+      "id": "motor-utility-equipment",
+      "agency": "經濟部能源署",
+      "title": "動力與公用設備補助",
+      "pages": [
+        "https://www.moeaea.gov.tw/ECW/populace/content/Content.aspx?menu_id=8784",
+        "https://www.mdss.org.tw/subsidy/index/index.aspx"
+      ],
+      "ongoing": true,
+      "fields": {
+        "summary": "購置登錄能源效率之高效率空氣壓縮機、風機、泵及低壓三相感應電動機等 4 項動力設備，可申請補助。"
+      }
+    }
+  ]
+}

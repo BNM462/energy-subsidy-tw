@@ -1,5 +1,5 @@
 // 智慧小幫手：只依本站補助資料回答。Gemini API Key 只存在伺服器端 Secret（GEMINI_API_KEY）。
-import { computeStatus, hotInfo, daysLeft, periodText, formatDate, sortSubsidies, UNKNOWN, taipeiDate } from '../public/js/logic.js';
+import { computeStatus, hotInfo, daysLeft, periodText, formatDate, sortSubsidies, UNKNOWN, taipeiDate, displayTitle, categoriesOf } from '../public/js/logic.js';
 
 export const NO_ANSWER = '目前本站收錄的補助資料中沒有找到相關資訊，建議確認主管機關最新公告。';
 export const UNAVAILABLE = '智慧小幫手目前暫時無法使用，請稍後再試。';
@@ -23,12 +23,13 @@ export function buildContext(subsidies, now = Date.now()) {
     const hot = hotInfo(s, now);
     const left = daysLeft(s, now);
     return [
-      `#${i + 1} ${s.title}`,
+      `#${i + 1} ${displayTitle(s)}（公告標題：${s.title}）`,
       `主辦機關：${s.agency}`,
       `狀態：${st.label}${st.reason ? `（${st.reason}）` : ''}${hot ? `；🔥${hot.text}` : left != null ? `；距截止剩 ${left} 天` : ''}`,
       `公告日期：${formatDate(s.announce_date)}`,
       `申請期間：${periodText(s)}`,
       s.deadline_text ? `期限原文：${s.deadline_text}` : null,
+      `適用對象類別：${categoriesOf(s).join("、") || UNKNOWN}`,
       `補助對象：${s.target || UNKNOWN}`,
       `補助金額：${s.amount_text || UNKNOWN}`,
       `補助內容：${(s.summary || UNKNOWN).slice(0, 220)}`,

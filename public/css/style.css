@@ -213,3 +213,59 @@ select {
   .chat-fab { padding: 14px; }
 }
 .b-carry { background: var(--surface-2); color: var(--text-2); font-weight: 600; border: 1px solid var(--border); }
+
+/* ---------- 卡片 v2：重點資訊列、對象分類標籤 ---------- */
+:root {
+  --cat0-bg: #e3efff; --cat0: #1d4f91;   /* 服務業 */
+  --cat1-bg: #fdebd9; --cat1: #8a4a0f;   /* 工業 */
+  --cat2-bg: #efe6fb; --cat2: #5b3591;   /* 機關學校 */
+  --cat3-bg: #fde4e8; --cat3: #9b2338;   /* 醫院／長照 */
+  --cat4-bg: #e1f3e3; --cat4: #2d6a35;   /* 農業 */
+  --cat5-bg: #fff3c9; --cat5: #6f5600;   /* 民眾 */
+  --fact-bg: #f2f6f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cat0-bg: #18304f; --cat0: #9cc3ff;
+    --cat1-bg: #3a2614; --cat1: #f3b77b;
+    --cat2-bg: #2c2140; --cat2: #cdb2f5;
+    --cat3-bg: #3d1a21; --cat3: #f5a3b2;
+    --cat4-bg: #1a3320; --cat4: #9edaa6;
+    --cat5-bg: #3a3112; --cat5: #f0d77a;
+    --fact-bg: #1d2b2a;
+  }
+}
+.card h2 { font-size: 1.15rem; margin: 4px 0 2px; }
+.agency { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.tag { font-size: .75rem; color: var(--text-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; line-height: 1.6; }
+.facts {
+  display: grid; grid-template-columns: 1.4fr 1.2fr .9fr; gap: 0; margin: 0 0 10px;
+  background: var(--fact-bg); border-radius: 10px; overflow: hidden;
+}
+.fact { padding: 8px 12px; min-width: 0; border-left: 1px solid var(--border); }
+.fact:first-child { border-left: 0; }
+.fact dt { font-size: .76rem; font-weight: 700; color: var(--brand); letter-spacing: .03em; margin-bottom: 1px; }
+.fact dd { margin: 0; font-size: .95rem; font-weight: 600; color: var(--text); word-break: break-word; font-variant-numeric: tabular-nums; }
+.fact dd.unknown { color: var(--muted); font-weight: 400; }
+.who { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 8px; }
+.who-label, .brief-label { font-size: .76rem; font-weight: 700; color: var(--brand); margin-right: 2px; }
+.cats { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.cat { font-size: .82rem; font-weight: 600; border-radius: 999px; padding: 1px 10px; line-height: 1.7; }
+.cat-0 { background: var(--cat0-bg); color: var(--cat0); }
+.cat-1 { background: var(--cat1-bg); color: var(--cat1); }
+.cat-2 { background: var(--cat2-bg); color: var(--cat2); }
+.cat-3 { background: var(--cat3-bg); color: var(--cat3); }
+.cat-4 { background: var(--cat4-bg); color: var(--cat4); }
+.cat-5 { background: var(--cat5-bg); color: var(--cat5); }
+.cat-none { font-size: .85rem; color: var(--muted); }
+.brief { -webkit-line-clamp: 2; color: var(--text); }
+.brief-label { margin-right: 8px; }
+.detail h3 { color: var(--brand); font-weight: 700; }
+.detail ul { display: grid; gap: 4px; }
+details.raw summary { cursor: pointer; color: var(--link); font-size: .9rem; }
+details.raw .content { margin-top: 8px; }
+@media (max-width: 640px) {
+  .facts { grid-template-columns: 1fr 1fr; }
+  .fact.f-period { grid-column: 1 / -1; border-left: 0; border-bottom: 1px solid var(--border); }
+  .fact.f-amount { border-left: 0; }
+}

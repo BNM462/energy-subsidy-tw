@@ -86,9 +86,10 @@ export function extractTarget(text) {
 }
 
 function targetAt(t, m) {
-  let seg = t.slice(m.index + m[0].length, m.index + m[0].length + 220);
-  // 遇到下一個條款標號即停止
+  let seg = t.slice(m.index + m[0].length, m.index + m[0].length + 420);
+  // 遇到下一個條款標號或下一個段落標題即停止
   seg = seg.split(/\n?\s*(?:[一二三四五六七八九十]+、|第[一二三四五六七八九十]+[條點])/)[0];
+  seg = seg.split(/\s*(?:補助條件|補助範圍|補助產品|補助項目|補助內容|補助金額|補助額度|補助比例|申請程序|申請方式|申請期間|受理期間|應備文件|申請條件|辦理方式|輔導方式)/)[0];
   seg = seg
     .replace(/[.…·．‧]{3,}\s*\d*/g, ' ') // 目錄的點線與頁碼
     .replace(/\s*\n\s*/g, ' ')
@@ -96,42 +97,89 @@ function targetAt(t, m) {
   // 必須是一段實際文字（不是表格欄位或目錄）
   if (/^[，,。、；;）)]/.test(seg)) return null;
   if ((seg.match(/[一-鿿]/g) || []).length < 4) return null;
-  return seg.length > 160 ? seg.slice(0, 160) + '…' : seg;
+  return seg.length > 400 ? seg.slice(0, 400) + '…' : seg;
 }
 
-const TARGET_TYPE_RULES = [
-  ['旅宿業', /旅館|旅宿|飯店|民宿|觀光旅館/],
-  ['醫療院所', /醫院|醫療院所|診所|醫療機構/],
-  ['機關／學校', /機關|學校|公立|大專校院|國中小|公有/],
-  ['住宅／一般民眾', /住宅|家庭|民眾|自然人|個人|家電|國民|住戶/],
-  ['農漁畜牧業', /農民|農會|漁會|漁業|畜牧|農業|農企業|養殖/],
-  ['能源技術服務業（ESCO）', /ESCO|節能服務業|能源技術服務業|節能績效保證/],
-  ['製造業／工廠', /製造業|工廠|工業|產業園區|廠商|企業/],
-  ['服務業／商業', /服務業|商業|零售|餐飲|商店|量販|百貨|批發|商家|營業場所|事業單位/],
+// 補助對象分類（6 類，與網站顏色標籤一致）。規則判斷，不使用 AI。
+export const TARGET_CATEGORIES = ['服務業', '工業', '機關學校', '醫院／長照', '農業', '民眾'];
+const CATEGORY_RULES = [
+  ['服務業', /服務業|商業|旅館|旅宿|飯店|民宿|餐飲|零售|批發|商店|店家|百貨|量販|商辦|辦公大樓|營業場所|營利事業|ESCO|能源技術服務|節能服務業/],
+  ['工業', /製造業|工廠|工業|產業園區|製程|廠商|造紙|紡織|石化|鋼鐵/],
+  ['機關學校', /機關|學校|大專校院|國中小|公立|公有|政府/],
+  ['醫院／長照', /醫院|醫療院所|醫療機構|醫事機構|診所|長照|長期照顧|照顧機構|福利機構|護理之家/],
+  ['農業', /農民|農會|漁會|漁業|畜牧|農業|農企業|養殖|農產品/],
+  ['民眾', /住宅|家庭|民眾|自然人|個人|國民|住戶|消費者|買受人|家電/],
 ];
 
+/**
+ * 以補助對象原文（沒有時用標題）判斷類別。
+ * 「依法設立之法人／公司／企業」未限定產業時，服務業與工業都適用。
+ */
 export function classifyTargetTypes(text) {
+  // 「主管機關核准」等用語不代表補助對象是機關
+  const t = normalizeText(text || '').replace(/(目的事業)?主管機關|中央機關|地方機關|機關核准/g, '');
+  const types = new Set(CATEGORY_RULES.filter(([, re]) => re.test(t)).map(([n]) => n));
+  if (/(依法設立|依法辦理)[^。；]{0,12}(法人|公司|企業|登記)|^\s*法人|公司登記|商業登記/.test(t) && !/服務業部門|商業服務業/.test(t)) {
+    types.add('服務業');
+    types.add('工業');
+  }
+  return TARGET_CATEGORIES.filter((c) => types.has(c));
+}
+
+const ACTION = /(補助|獎勵|汰換|導入|改善|購置|設置|輔導|退還|示範)/;
+const PURPOSE = /(為(協助|鼓勵|推動|促進|輔導|提升|加速|落實)|藉由|鼓勵|協助|落實|目的|宗旨)/;
+const NOISE = /(聯絡|窗口|技士|承辦|專員|科長|洽詢|客服|專線|郵寄|線上辦理|受理申請單位|專案辦公室|申請時間|申請方式|備註|注意事項|說明會|依\s*據|准駁|撤銷|廢止|委任|委託|法令|辦法第|要點第|申請書|附件|聯絡|電話|傳真|地址|網址|https?:|檢附|應備|文件|簽約|核銷|撥款|切結|公職人員|送達|郵戳|發文|瀏覽|登入|下載)/;
+const ENERGY_HINT = /節能|節電|能源|能效|高效率|汰換|空調|照明|冷凍|冷藏|冷卻|熱泵|馬達|空壓|廢熱|ESCO/;
+
+/**
+ * 補助重點：從官方原文挑出最能說明「補助什麼」的一句，再精簡為 1~2 個分句（約 70 字內）。
+ * 純規則判斷，只會刪減原文，不會新增官方沒寫的內容。
+ */
+export function extractBrief(text, title = '') {
   const t = normalizeText(text || '');
-  const types = TARGET_TYPE_RULES.filter(([, re]) => re.test(t)).map(([n]) => n);
-  return types;
-}
-
-/** 內文摘要：取公告事項或第一段實質內容，不改寫 */
-export function extractSummary(text, title) {
-  const t = normalizeText(text).replace(new RegExp(escapeRe(title || '').slice(0, 60)), '');
-  const lines = t
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length >= 15 && /[一-鿿]/.test(l))
-    .filter((l) => !/^(發布日期|發文日期|發文字號|附件|署長|部長|局長|主任委員|相關檔案|檔案名稱|更新日期|瀏覽人次|發布單位|點閱)/.test(l));
-  const subject = lines.find((l) => /^主\s*旨/.test(l));
-  const first = subject || lines[0] || '';
-  const s = first.replace(/^主\s*旨\s*[:：]\s*/, '');
-  return s.length > 180 ? s.slice(0, 180) + '…' : s || null;
-}
-
-function escapeRe(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sentences = t
+    .split(/[。\n]/)
+    .map((s) => s.replace(/^\s*(?:[一二三四五六七八九十]+、|[（(][一二三四五六七八九十\d]+[）)]|\d+[.、]|主\s*旨\s*[:：]|辦理目的|計畫目的|目的\s*[:：]?)\s*/, '').trim())
+    .filter((s) => s.length >= 12 && s.length <= 260 && /[一-鿿]/.test(s));
+  let best = null;
+  let bestScore = -Infinity;
+  sentences.slice(0, 60).forEach((s, i) => {
+    let score = 0;
+    if (ACTION.test(s)) score += 3;
+    if (ENERGY_HINT.test(s)) score += 2;
+    if (PURPOSE.test(s)) score += 1;
+    if (NOISE.test(s)) score -= 4;
+    if (/^公告|公告$|事宜$/.test(s)) score -= 3;
+    if (/(期間|日期|截止|受理申請期間|受理時間|為限|同一年度|不得|須於)/.test(s)) score -= 3;
+    // 只有計畫或法規名稱、沒有說明內容的句子
+    if (s.length < 32 && /(要點|辦法|須知|計畫|作業|專案)。?$/.test(s)) score -= 3;
+    if (title && s.includes(title.slice(0, 12))) score -= 1;
+    score -= i * 0.05;
+    if (score > bestScore) {
+      bestScore = score;
+      best = s;
+    }
+  });
+  if (!best || bestScore < 3) return null;
+  const clauses = best.split(/[，,；;]/).map((c) => c.trim()).filter(Boolean);
+  let start = clauses.findIndex((c) => ACTION.test(c));
+  if (start < 0) start = 0;
+  const out = [];
+  let len = 0;
+  for (let i = start; i < clauses.length; i++) {
+    const c = clauses[i].replace(/^(透過|藉由|經由|並|以|將|期能|期)\s*/, '');
+    if (len && len + c.length > 70) break;
+    out.push(c);
+    len += c.length;
+    if (len >= 28 && out.some((x) => ENERGY_HINT.test(x))) break;
+  }
+  // 尚未提到節能面向時，補上後面第一個提到節能的分句
+  if (!out.some((x) => ENERGY_HINT.test(x))) {
+    const e = clauses.slice(start + out.length).find((c) => ENERGY_HINT.test(c) && len + c.length <= 85);
+    if (e) out.push(e.replace(/^(同時|並|以|將)\s*/, ''));
+  }
+  const brief = out.join('，').replace(/[，、]+$/, '');
+  return brief.length >= 10 ? `${brief.slice(0, 90)}。` : null;
 }
 
 /** 受託執行單位（官方原文「委託財團法人XX辦理」） */
@@ -176,8 +224,9 @@ export function extractFields({ title, text, listDate = null, attachmentText = '
     amount_text: amountAll.text,
     amount_details: amountAll.details,
     target,
-    target_types: classifyTargetTypes(`${title}\n${target || ''}`),
-    summary: extractSummary(body, title),
+    target_types: classifyTargetTypes(`${title}\n${target || ''}\n${ids.programName || ''}`),
+    // 補助重點：網頁內文優先，網頁沒有才看附件
+    summary: extractBrief(body, title) || extractBrief(attachmentText, title),
     doc_no: ids.docNo,
     program_name: ids.programName,
     delegate: extractDelegate(body),

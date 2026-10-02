@@ -19,7 +19,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 })();
 
 export const USER_AGENT =
-  'Mozilla/5.0 (compatible; EnergySubsidyTW/1.0; +https://github.com/BNM462/energy-subsidy-tw)';
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; compatible; EnergySubsidyTW/1.0; +https://github.com/BNM462/energy-subsidy-tw)';
 
 const HOST_DELAY_MS = 1500;
 const TIMEOUT_MS = 25000;

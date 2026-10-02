@@ -1,5 +1,6 @@
 import {
   computeStatus, isNew, hotInfo, sortSubsidies, formatDate, formatDateTime, taipeiDate, periodText, UNKNOWN,
+  CATEGORIES, categoriesOf, displayTitle, titleTags, targetPoints,
 } from './logic.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -55,7 +56,7 @@ const STATUS_FILTERS = [
 function matches(s, f, skip) {
   if (skip !== 'status' && f.status && computeStatus(s, now()).key !== f.status) return false;
   if (skip !== 'agency' && f.agency && s.agency !== f.agency) return false;
-  if (skip !== 'target' && f.target && !(s.target_types || []).includes(f.target)) return false;
+  if (skip !== 'target' && f.target && !categoriesOf(s).includes(f.target)) return false;
   return true;
 }
 
@@ -73,8 +74,8 @@ function renderFilters() {
     );
   }
   fillSelect($('#f-agency'), [...new Set(state.subsidies.map((s) => s.agency))].sort((a, b) => a.localeCompare(b, 'zh-Hant')), state.filter.agency);
-  const types = [...new Set(state.subsidies.flatMap((s) => s.target_types || []))];
-  fillSelect($('#f-target'), types, state.filter.target);
+  const used = new Set(state.subsidies.flatMap((s) => categoriesOf(s)));
+  fillSelect($('#f-target'), CATEGORIES.filter((c) => used.has(c)), state.filter.target);
 }
 
 function fillSelect(select, values, current) {
@@ -83,9 +84,21 @@ function fillSelect(select, values, current) {
 }
 
 // ---------- 卡片 ----------
-function metaItem(label, value) {
+function fact(label, value, cls = '') {
   const unknown = !value || value === UNKNOWN;
-  return el('div', {}, el('dt', { text: label }), el('dd', { class: unknown ? 'unknown' : null, text: unknown ? UNKNOWN : value }));
+  return el('div', { class: `fact ${cls}` }, el('dt', { text: label }), el('dd', { class: unknown ? 'unknown' : null, text: unknown ? UNKNOWN : value }));
+}
+
+function categoryChips(s) {
+  const cats = categoriesOf(s);
+  if (!cats.length) return el('span', { class: 'cat-none', text: UNKNOWN });
+  return el('span', { class: 'cats' }, cats.map((c) => el('span', { class: `cat cat-${CATEGORIES.indexOf(c)}`, text: c })));
+}
+
+/** 卡片上的申請期間：只顯示日期（同年省略年份），完整原文在詳細資訊 */
+function shortPeriod(s) {
+  const p = periodText(s);
+  return p.replace(/(\d{4})\/(\d{2}\/\d{2}) ～ \1\//, '$1/$2 ～ ');
 }
 
 function statusBadge(st) {
@@ -104,6 +117,7 @@ function card(s) {
   const toggle = el('button', { type: 'button', class: 'btn-ghost', 'aria-expanded': 'false', 'aria-controls': detailId }, '詳細資訊 ▾');
   toggle.addEventListener('click', () => toggleDetail(s, toggle, detailBox, viewsEl));
 
+  const tags = titleTags(s);
   return el('article', { class: `card${st.key === 'closed' ? ' is-closed' : ''}` },
     el('div', { class: 'badges' },
       statusBadge(st),
@@ -111,16 +125,17 @@ function card(s) {
       hot && el('span', { class: 'badge b-hot', text: `🔥 即將截止・${hot.text}` }),
       s.link_status === 'dead' && el('span', { class: 'badge b-dead', text: '官方連結已失效' }),
       s.carried_over && el('span', { class: 'badge b-carry', text: `${s.year} 年公告・今年仍受理` }),
+      s.ongoing && el('span', { class: 'badge b-carry', text: '常態辦理' }),
     ),
-    el('h2', { text: s.title }),
-    el('p', { class: 'agency', text: s.delegate ? `${s.agency}（受託執行單位：${s.delegate}）` : s.agency }),
-    el('dl', { class: 'meta' },
-      metaItem('公告日期', s.announce_date ? formatDate(s.announce_date) : null),
-      metaItem('補助期間', periodText(s)),
-      metaItem('補助對象', s.target),
-      metaItem('最高補助金額', s.amount_text),
+    el('h2', { text: displayTitle(s) }),
+    el('p', { class: 'agency' }, s.agency, ...tags.map((t) => el('span', { class: 'tag', text: t }))),
+    el('dl', { class: 'facts' },
+      fact('申請期間', shortPeriod(s), 'f-period'),
+      fact('最高補助', s.amount_text, 'f-amount'),
+      fact('公告日期', s.announce_date ? formatDate(s.announce_date) : null, 'f-date'),
     ),
-    s.summary && el('p', { class: 'brief', text: s.summary }),
+    el('div', { class: 'who' }, el('span', { class: 'who-label', text: '適用對象' }), categoryChips(s)),
+    s.summary && el('p', { class: 'brief' }, el('span', { class: 'brief-label', text: '補助重點' }), s.summary),
     el('div', { class: 'card-foot' },
       viewsEl,
       el('div', { class: 'actions' },
@@ -174,15 +189,20 @@ function renderDetail(d, box) {
     const href = safeHref(a.url || a);
     return el('li', {}, href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', text: a.label || a.url || a }) : String(a.label || a));
   }));
+  // 展開後只補充卡片上沒有的資訊，不重複
+  const points = targetPoints(d);
+  const fullTitle = d.title && d.title !== displayTitle(d) ? d.title : null;
   parts.push(
     d.link_status === 'dead' && el('p', { class: 'warn', text: '官方網址目前無法開啟，可能已下架或改版；以下為先前擷取的官方原文。' }),
-    section('申請期間', el('p', { text: periodText(d) }), d.deadline_text && el('p', { class: 'small', text: `官方原文：${d.deadline_text}` })),
-    section('補助對象', el('p', { text: d.target || UNKNOWN })),
-    section('補助金額', el('p', { text: d.amount_text || UNKNOWN }), d.amount_details?.length > 1 && el('ul', {}, d.amount_details.map((x) => el('li', { text: x })))),
-    section('補助內容（官方原文擷取）', el('div', { class: 'content', text: d.content || d.summary || UNKNOWN })),
+    fullTitle && section('官方公告標題', el('p', { text: fullTitle })),
+    section('補助對象', points.length > 1 ? el('ul', {}, points.map((x) => el('li', { text: x }))) : el('p', { text: points[0] || d.target || UNKNOWN })),
+    d.deadline_text && section('申請期限（官方原文）', el('p', { text: d.deadline_text })),
+    d.amount_details?.length > 1 && section('補助金額明細', el('ul', {}, d.amount_details.map((x) => el('li', { text: x })))),
+    d.delegate && section('受託執行單位', el('p', { text: d.delegate })),
+    d.content && el('details', { class: 'raw' }, el('summary', { text: '查看官方公告原文' }), el('div', { class: 'content', text: d.content })),
     d.attachments?.length && section('官方附件', links(d.attachments)),
     d.source_urls?.length > 1 && section('其他官方來源', links(d.source_urls.filter((u) => u !== d.official_url))),
-    el('p', { class: 'small', text: `資料編號：${d.id}　首次發現：${formatDateTime(Date.parse(d.first_seen_at), false)}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}${d.manual ? '　（已人工校正）' : ''}` }),
+    el('p', { class: 'small', text: `資料編號：${d.id}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}${d.manual ? '　（已人工校正）' : ''}` }),
   );
   box.replaceChildren(...parts.filter((x) => x instanceof Node));
 }

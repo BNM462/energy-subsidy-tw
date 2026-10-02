@@ -7,7 +7,7 @@ const JSON_FIELDS = ['target_types', 'amount_details', 'source_urls', 'attachmen
 export const OVERRIDABLE = [
   'title', 'agency', 'announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text',
   'until_quota', 'status_flag', 'target', 'target_types', 'amount_text', 'amount_details', 'summary',
-  'content', 'official_url', 'hidden', 'delegate',
+  'content', 'official_url', 'hidden', 'delegate', 'display_title', 'target_points', 'ongoing', 'period_text',
 ];
 
 function parseRow(row) {
@@ -51,7 +51,13 @@ export function applyOverrides(sub, { overrides, excluded }) {
 
 const LIST_COLUMNS = `id, title, agency, announce_date, year, apply_start, apply_end, apply_end_time, deadline_text,
   until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status, delegate,
-  first_seen_at, updated_at, views, hidden`;
+  program_name, first_seen_at, updated_at, views, hidden`;
+
+/** 常態／多年期辦理的重點計畫：今年仍在期程內（或期程未明）就顯示 */
+export function ongoingVisible(s, year) {
+  if (!s.ongoing) return false;
+  return !s.apply_end || s.apply_end >= `${year}-01-01`;
+}
 
 /**
  * 去年公告、但今年仍在受理的補助（例：114/12/31 公告、受理至 116/01/31 的住宅家電汰舊換新節能補助）。
@@ -67,14 +73,20 @@ export function carriedOver(s, year) {
 /** 指定年度（預設為台灣時間今年）的公開補助清單：今年公告者 + 去年公告今年仍受理者 */
 export async function listSubsidies(db, { year = taipeiYear() } = {}) {
   const [{ results }, ov] = await Promise.all([
-    db.prepare(`SELECT ${LIST_COLUMNS} FROM subsidies WHERE hidden = 0 AND year BETWEEN ? AND ?`).bind(year - 1, year + 1).all(),
+    db
+      .prepare(
+        `SELECT ${LIST_COLUMNS} FROM subsidies WHERE hidden = 0 AND (year BETWEEN ?1 AND ?2
+           OR id IN (SELECT target FROM overrides) OR official_url IN (SELECT target FROM overrides))`,
+      )
+      .bind(year - 1, year + 1)
+      .all(),
     loadOverrides(db),
   ]);
   return results
     .map(parseRow)
     .map((s) => applyOverrides(s, ov))
-    .filter((s) => s && (s.year === year || carriedOver(s, year)))
-    .map((s) => (s.year === year ? s : { ...s, carried_over: true }));
+    .filter((s) => s && (s.year === year || carriedOver(s, year) || ongoingVisible(s, year)))
+    .map((s) => (s.year === year ? s : s.ongoing ? { ...s, ongoing: true } : { ...s, carried_over: true }));
 }
 
 export async function getSubsidy(db, id) {

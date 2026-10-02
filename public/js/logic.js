@@ -172,6 +172,7 @@ export function sortSubsidies(list, now = Date.now()) {
 
 /** 補助期間文字 */
 export function periodText(sub) {
+  if (sub.period_text) return sub.period_text;
   const s = sub.apply_start ? formatDate(sub.apply_start) : null;
   let e = sub.apply_end ? formatDate(sub.apply_end) : null;
   if (e && sub.apply_end_time) e += ` ${sub.apply_end_time}`;
@@ -194,3 +195,67 @@ export const TARGET_TYPES = [
   '能源技術服務業（ESCO）',
   '其他',
 ];
+
+// ---------- 顯示用：精簡名稱、標籤、補助對象分類 ----------
+
+/** 補助對象 6 大類（顏色定義在 CSS：.cat-0 ~ .cat-5） */
+export const CATEGORIES = ['服務業', '工業', '機關學校', '醫院／長照', '農業', '民眾'];
+
+// 舊版分類名稱對照（舊資料重新整理前仍可正確顯示）
+const LEGACY_CATEGORY = {
+  '服務業／商業': '服務業', 旅宿業: '服務業', '能源技術服務業（ESCO）': '服務業',
+  '製造業／工廠': '工業', '機關／學校': '機關學校', 醫療院所: '醫院／長照',
+  '住宅／一般民眾': '民眾', 農漁畜牧業: '農業',
+};
+
+export function categoriesOf(sub) {
+  const set = new Set((sub.target_types || []).map((t) => LEGACY_CATEGORY[t] || t));
+  return CATEGORIES.filter((c) => set.has(c));
+}
+
+const CN_NUM = '一二三四五六七八九十';
+
+/** 精簡名稱：取「」內的計畫名稱，去掉年度、公告用語、（修正版）、作業要點等 */
+export function displayTitle(sub) {
+  if (sub.display_title) return sub.display_title;
+  const t = String(sub.title || '');
+  const quoted = /[「『]([^」』]{4,60})[」』]/.exec(t);
+  let name = quoted ? quoted[1] : sub.program_name || t;
+  name = name
+    .replace(/^\s*(\[[^\]]*\]|【[^】]*】)\s*/, '')
+    .replace(/^(公告|修正|訂定|徵求)\s*/, '')
+    .replace(/^(中華民國)?\s*\d{2,4}\s*(年度|年)\s*[-－–—:：]?\s*/, '')
+    .replace(/[（(](修正版|已結束|已結束申請|更新版?)[）)]\s*$/, '')
+    .replace(/(作業要點|補助要點|作業規範|申請須知|須知|相關規定公告|相關規定|公告)$/, '')
+    .replace(/要點$/, '')
+    .trim();
+  return name || t;
+}
+
+/** 標題中的年度與梯次（例：116年度、第四梯次），以小標籤呈現 */
+export function titleTags(sub) {
+  const t = String(sub.title || '');
+  const tags = [];
+  const y = /(?<!\d)(\d{3})\s*(年度|年)/.exec(t);
+  if (y) tags.push(`${y[1]}年度`);
+  const b = /第\s*([一二三四五六七八九十\d]+)\s*(梯次|梯|次|期)/.exec(t);
+  if (b) tags.push(`第${/^\d+$/.test(b[1]) ? CN_NUM[+b[1] - 1] || b[1] : b[1]}梯次`);
+  return tags;
+}
+
+/** 補助對象原文 → 條列（依（一）（二）、第一類、1. 等標號拆分；只拆不改寫） */
+export function targetPoints(sub) {
+  if (Array.isArray(sub.target_points) && sub.target_points.length) return sub.target_points;
+  const t = String(sub.target || '').replace(/…$/, '').trim();
+  if (!t) return [];
+  const parts = t
+    .split(/\s*(?=[（(][一二三四五六七八九十]+[）)]|(?<![\d.])[1-9][.、](?!\d)|第[一二三四五六七八九十]+類(?!補助對象))/)
+    .map((p) =>
+      p
+        .replace(/^[（(][一二三四五六七八九十]+[）)]\s*|^[1-9][.、]\s*/, '')
+        .replace(/^(第[一二三四五六七八九十、及與]+類)\s*補助對象為/, '$1：')
+        .trim(),
+    )
+    .filter((p) => p.length >= 2);
+  return parts.slice(0, 8);
+}
