@@ -205,7 +205,7 @@ async function main() {
     let priority = null;
     if (!st) priority = 0;
     else if (st.verdict === 'error' && age > RETRY_ERROR_MS && st.fail_count < 12) priority = 1;
-    else if (st.verdict === 'subsidy' && age > RECHECK_SUBSIDY_MS) priority = 2;
+    else if (st.verdict === 'subsidy' && (FORCE_DISCOVERY || age > RECHECK_SUBSIDY_MS)) priority = 2;
     if (priority != null) todo.push({ ...c, priority });
   }
   todo.sort((a, b) => a.priority - b.priority || (b.date || '').localeCompare(a.date || ''));

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       rediscover:
-        description: '重新探索所有來源並往前翻頁補齊今年資料'
+        description: '重新探索所有來源、往前翻頁補齊今年資料，並立即重新檢查已收錄的補助'
         type: boolean
         default: false
 
