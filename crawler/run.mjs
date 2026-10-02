@@ -266,7 +266,8 @@ async function main() {
     let priority = null;
     if (!st) priority = 0;
     else if (st.verdict === 'error' && age > RETRY_ERROR_MS && st.fail_count < 12) priority = 1;
-    else if (st.verdict === 'subsidy' && (FORCE_DISCOVERY || age > RECHECK_SUBSIDY_MS)) priority = 2;
+    // 已收錄的補助定期複查；但對應的補助若不在本輪資料中（舊年度資料），不複查，避免重複建立
+    else if (st.verdict === 'subsidy' && (!st.subsidy_id || subsidies.has(st.subsidy_id) || c.program) && (FORCE_DISCOVERY || age > RECHECK_SUBSIDY_MS)) priority = 2;
     else if (c.row && st.content_hash !== sha1(EXTRACTOR_VERSION + c.row.text)) priority = 2;
     if (priority != null) todo.push({ ...c, priority });
   }

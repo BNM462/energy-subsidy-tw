@@ -22,7 +22,8 @@ export async function onRequestGet({ request, env }) {
   if (!checkInternalAuth(request, env)) return error(401, 'unauthorized');
   const db = env.DB;
   const [subs, urls, sources, meta] = await db.batch([
-    db.prepare('SELECT * FROM subsidies WHERE year >= ? OR year IS NULL').bind(taipeiYear() - 1),
+    // 近兩年＋無年度＋重點監測計畫（常態計畫的年度可能很早，例如 2019 年開辦的貨物稅退還）
+    db.prepare("SELECT * FROM subsidies WHERE year >= ? OR year IS NULL OR dedupe_key LIKE 'program:%'").bind(taipeiYear() - 1),
     db.prepare('SELECT url, source_id, verdict, subsidy_id, content_hash, first_seen_at, last_checked_at, fail_count FROM crawl_urls'),
     db.prepare('SELECT * FROM sources_status'),
     db.prepare('SELECT key, value FROM meta'),
