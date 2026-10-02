@@ -9,7 +9,7 @@ import { fetchPage, fetchResource, mapLimit } from './lib/fetcher.mjs';
 import { discoverListPages, SUBSIDY_ZONE_TEXT, sameAgency } from './lib/discover.mjs';
 import { extractListLinks, extractMain, findNextPage, extractRowDocs } from './lib/html.mjs';
 import { classify, titleWorthFetching, energySignals } from './lib/classify.mjs';
-import { extractFields } from './lib/extract.mjs';
+import { extractFields, briefLooksValid } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
 import { dedupeKey, idFromKey, findMatch, sha1 } from './lib/dedupe.mjs';
 import { normalizeText, toAdYear } from './lib/dates.mjs';
@@ -363,6 +363,8 @@ async function main() {
         merged.target_types = doc.target_types;
         merged.signals = doc.signals;
         merged.content_hash = doc.content_hash;
+        // 補助重點：新擷取結果優先；沒有時保留仍合格的舊重點（可能來自計畫介紹頁）
+        merged.summary = doc.summary ?? (briefLooksValid(match.summary) ? match.summary : null);
       } else {
         merged.target_types = [...new Set([...(merged.target_types || []), ...doc.target_types])];
         if (!merged.content) merged.content = doc.content;

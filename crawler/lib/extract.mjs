@@ -135,6 +135,13 @@ const ENERGY_HINT = /節能|節電|能源|能效|高效率|汰換|空調|照明|
  * 補助重點：從官方原文挑出最能說明「補助什麼」的一句，再精簡為 1~2 個分句（約 70 字內）。
  * 純規則判斷，只會刪減原文，不會新增官方沒寫的內容。
  */
+/** 既有的補助重點是否仍符合目前的品質規則（舊版擷取的公文套語會被淘汰） */
+export function briefLooksValid(s) {
+  if (!s) return false;
+  const t = normalizeText(s);
+  return !NOISE.test(t) && !/^公告|公告。?$|如附件|旨揭/.test(t) && (ACTION.test(t) || ENERGY_HINT.test(t));
+}
+
 export function extractBrief(text, title = '') {
   const t = normalizeText(text || '');
   const sentences = t
