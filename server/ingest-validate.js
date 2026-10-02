@@ -85,6 +85,7 @@ export function validateSubsidy(s) {
     hidden: !!s.hidden,
     delegate: str(s.delegate, 120),
     period_varies: !!s.period_varies,
+    period_text: str(s.period_text, 120),
   };
 }
 

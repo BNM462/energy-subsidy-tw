@@ -12,7 +12,7 @@ import { classify, titleWorthFetching, energySignals, NEGATIVE_TITLE } from './l
 import { extractFields, briefLooksValid } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
 import { dedupeKey, idFromKey, findMatch, sha1 } from './lib/dedupe.mjs';
-import { normalizeText, toAdYear } from './lib/dates.mjs';
+import { normalizeText, toAdYear, extractBatches, pickBatch } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
@@ -49,7 +49,9 @@ const programsCfg = readJson('./config/programs.json').programs || [];
 // 關注補助：標題符合關鍵字即收錄，並在首次發現時通知（不限哪個機關的網站）
 const titleWatch = (readJson('./config/programs.json').title_watch || []).map((w) => ({ ...w, re: new RegExp(w.pattern) }));
 const watchMatch = (title) => titleWatch.find((w) => w.re.test(normalizeText(title || ''))) || null;
-const excludedTargets = new Set(exclusionsCfg.map((x) => x.target));
+const excludedTargets = new Set(exclusionsCfg.filter((x) => x.target).map((x) => x.target));
+const excludedPatterns = exclusionsCfg.filter((x) => x.pattern).map((x) => ({ ...x, re: new RegExp(x.pattern) }));
+const excludedPattern = (title) => excludedPatterns.find((x) => x.re.test(normalizeText(title || ''))) || null;
 
 // ---------- 狀態 ----------
 async function api(path, init = {}) {
@@ -290,6 +292,13 @@ async function main() {
       fail_count: st?.fail_count || 0,
     };
     urlUpdates.push(rec);
+    // 人工排除的標題（例：改由重點監測清單子計畫呈現的公告）
+    if (!c.program && excludedPattern(c.title)) {
+      if (st?.verdict === 'subsidy') withdrawnUrls.add(c.url);
+      rec.verdict = 'not';
+      rec.reason = `人工排除：${excludedPattern(c.title).note || '標題符合排除規則'}`.slice(0, 200);
+      return;
+    }
     let detail;
     try {
       detail = await loadDetail(c.url, c.row);
@@ -343,7 +352,25 @@ async function main() {
     // 公告年度：公告日期 → 列表日期 → 標題明寫的年度（如「115年度」）；都沒有就是未知（不顯示在當年度清單，但保留資料）
     const ty = /(?<!\d)(\d{2,3})\s*年度/.exec(normalizeText(`${title} ${main.heading || ''} ${main.pageTitle || ''}`));
     // 公告年度：公告日期 → 列表日期 → 發文字號年份 → 標題中的年度
-    const docYear = f.announce_date ? +f.announce_date.slice(0, 4) : c.date ? +c.date.slice(0, 4) : f.doc_year || (ty ? toAdYear(ty[1]) : null);
+    let docYear = f.announce_date ? +f.announce_date.slice(0, 4) : c.date ? +c.date.slice(0, 4) : f.doc_year || (ty ? toAdYear(ty[1]) : null);
+    // 分梯次受理的計畫：依官方梯次表顯示「受理中／下一梯／最近一梯」
+    if (c.program?.batches) {
+      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+      const b = pickBatch(extractBatches(main.text), today, c.program.batch_category || null);
+      if (b) {
+        const cn = '一二三四五六七八九十';
+        const md = (iso) => iso.slice(5).replace('-', '/');
+        f.apply_start = b.start;
+        f.apply_end = b.end;
+        f.apply_end_time = b.endTime;
+        f.period_varies = false;
+        f.period_text = `第${cn[b.no - 1] || b.no}梯${b.tentative ? '（暫定）' : ''} ${b.start ? b.start.replaceAll('-', '/') + ' ～ ' : '至 '}${b.start && b.start.slice(0, 4) === b.end.slice(0, 4) ? md(b.end) : b.end.replaceAll('-', '/')}${b.endTime ? ' ' + b.endTime : ''}`;
+        f.deadline_text = b.list.map((x) => x.raw).join('；').slice(0, 300);
+        docYear = docYear || +b.end.slice(0, 4);
+      }
+    }
+    // 重點監測計畫沒有公告日期時，以官方受理期間判斷年度
+    if (c.program && !docYear) docYear = f.apply_start ? +f.apply_start.slice(0, 4) : f.apply_end ? +f.apply_end.slice(0, 4) : null;
     rec.verdict = 'subsidy';
     rec.reason = cls.signals.join('、').slice(0, 200);
     docs.push({
@@ -360,6 +387,8 @@ async function main() {
         signals: cls.signals,
         content: main.text.slice(0, 8000),
         content_hash: hash,
+        // 重點監測計畫有固定身分，不與其他公告混合
+        ...(c.program ? { dedupe_key: `program:${c.program.id}` } : {}),
       },
     });
   });
@@ -434,7 +463,9 @@ async function main() {
     } else {
       merged = { ...doc, first_seen_at: rec.first_seen_at, link_status: 'ok' };
     }
-    merged.dedupe_key = match && match.year != null ? match.dedupe_key : dedupeKey(merged);
+    merged.dedupe_key = String(doc.dedupe_key || '').startsWith('program:')
+      ? doc.dedupe_key
+      : match && match.year != null ? match.dedupe_key : dedupeKey(merged);
     merged.id = match?.id || idFromKey(merged.dedupe_key);
     // 不同補助剛好算出相同 id 時，避免覆蓋
     if (!match && subsidies.has(merged.id)) merged.id = idFromKey(merged.dedupe_key + '|' + doc.official_url);

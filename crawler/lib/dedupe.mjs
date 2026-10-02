@@ -75,6 +75,15 @@ export function idFromKey(key) {
  * existing: [{ id, dedupe_key, agency, year, title, program_name, official_url, source_urls, doc_no }]
  */
 export function findMatch(doc, existing) {
+  // 重點監測計畫有固定身分（program:編號），只依身分或網址對應，不做名稱模糊比對
+  const isProgram = (x) => String(x.dedupe_key || '').startsWith('program:');
+  if (isProgram(doc)) {
+    return existing.find((e) => e.dedupe_key === doc.dedupe_key || e.official_url === doc.official_url || (e.source_urls || []).includes(doc.official_url)) || null;
+  }
+  // 一般公告不可被模糊合併進重點監測計畫（只允許網址相同）
+  const urlsOnly = existing.filter(isProgram);
+  existing = existing.filter((e) => !isProgram(e));
+  for (const e of urlsOnly) if (e.official_url === doc.official_url) return e;
   const key = dedupeKey(doc);
   const urls = new Set([doc.official_url, ...(doc.source_urls || [])]);
   // 1) 相同網址

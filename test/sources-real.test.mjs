@@ -141,3 +141,24 @@ test('建研所 116 年度公告（模擬）：任何機關網站刊登都能抓
   // 名單類不收錄
   assert.ok(!watch.some((re) => re.test(nt('內政部核定116年度補助中央政府公有既有建築物…入選排序名單'))) || classify({ title: '內政部核定116年度補助中央政府公有既有建築物…入選排序名單', text: '' }).isSubsidy === false);
 });
+
+test('韌性計畫梯次表：依類別挑出受理中／下一梯／最近一梯', async () => {
+  const { extractBatches, pickBatch } = await import('../crawler/lib/dates.mjs');
+  const text = `各梯次受理時間如下:
+第一梯:自115年2月13日(五)至 115年3月31日(二)下午5時止
+第二梯僅受理「ＡＩ能源管理」:自115年5月1日(五)起至115年6月1日(一)下午5時止
+第三梯僅受理「智慧營運整合」類別之申請:自 115年7月1日(三)起至 115年7月31日(五)下午5時止
+第四梯僅受理「智慧營運整合」:自115年10月1日(四)起至 115年10月30日(五)下午5時止`;
+  const b = extractBatches(text);
+  assert.equal(b.length, 4);
+  assert.equal(b[1].only, 'AI能源管理');
+  const energy = pickBatch(b, '2026-10-02', 'AI能源管理');
+  assert.equal(energy.no, 2, 'AI能源管理今年最後一梯是第二梯（已截止）');
+  const ops = pickBatch(b, '2026-10-02', '智慧營運整合');
+  assert.equal(ops.no, 4);
+  assert.equal(ops.end, '2026-10-30');
+  const multi = extractBatches('第二梯:自115年8月3日(一)起至115年8月31日(一)下午5時止。\n第三梯(暫定):自115年11月2日(一)起至115年11月30日(一)下午5時止。');
+  const next = pickBatch(multi, '2026-10-02');
+  assert.equal(next.no, 3);
+  assert.ok(next.tentative, '暫定梯次要標示');
+});

@@ -128,7 +128,7 @@ function card(s) {
       s.ongoing && el('span', { class: 'badge b-carry', text: '常態辦理' }),
     ),
     el('h2', { text: displayTitle(s) }),
-    el('p', { class: 'agency' }, s.agency, ...tags.map((t) => el('span', { class: 'tag', text: t }))),
+    el('p', { class: 'agency' }, s.agency, ...tags.map((t) => el('span', { class: 'tag', text: t })), ...(s.tags || []).map((t) => el('span', { class: `tag tag-kind${/節能/.test(t) ? ' tag-energy' : ''}`, text: t }))),
     el('dl', { class: 'facts' },
       fact('申請期間', shortPeriod(s), 'f-period'),
       fact('最高補助', s.amount_text, 'f-amount'),

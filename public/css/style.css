@@ -279,3 +279,5 @@ details.raw .content { margin-top: 8px; }
 .quota-contact { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
 .quota-contact a { font-weight: 700; font-size: 1.05rem; }
 .examples button:disabled { opacity: .5; cursor: not-allowed; }
+.tag-kind { background: var(--surface-2); font-weight: 600; }
+.tag-energy { background: var(--open-bg); color: var(--open); border-color: transparent; }

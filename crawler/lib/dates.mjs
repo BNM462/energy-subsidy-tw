@@ -298,3 +298,49 @@ export function extractAnnounceDate(text) {
   }
   return null;
 }
+
+/**
+ * 梯次表：「第一梯:自115年2月13日(五)至115年3月31日(二)下午5時止」
+ *        「第二梯僅受理「ＡＩ能源管理」:自115年5月1日起至115年6月1日止」
+ *        「第三梯(暫定):自115年11月2日起至115年11月30日下午5時止」
+ * 回傳 [{ no, tentative, only, start, end, endTime, raw }]（依官方原文，不推測）
+ */
+export function extractBatches(text) {
+  const t = normalizeText(text);
+  const out = [];
+  const re = /第\s*([一二三四五六七八九十\d]+)\s*梯(?:次)?([^:：\n]{0,40})[:：]\s*([^\n]+)/g;
+  let m;
+  while ((m = re.exec(t))) {
+    const p = extractPeriod(m[3]);
+    if (!p.end) continue;
+    const mid = m[2];
+    const only = /僅受理\s*[「『]([^」』]+)[」』]/.exec(mid);
+    const cn = '一二三四五六七八九十';
+    const no = /^\d+$/.test(m[1]) ? +m[1] : cn.indexOf(m[1]) + 1;
+    out.push({
+      no,
+      tentative: /暫定/.test(mid + m[3]),
+      only: only ? only[1].normalize('NFKC') : null,
+      start: p.start,
+      end: p.end,
+      endTime: p.endTime,
+      raw: `第${m[1]}梯${mid.trim()}：${m[3].trim()}`.slice(0, 160),
+    });
+  }
+  return out;
+}
+
+/**
+ * 依今天日期挑出要顯示的梯次：受理中 → 下一個尚未開始 → 最近結束的一梯。
+ * category：只看「未限定類別」或「限定為該類別」的梯次。
+ */
+export function pickBatch(batches, today, category = null) {
+  const cat = category ? category.normalize('NFKC') : null;
+  const list = batches.filter((b) => !cat || !b.only || b.only === cat).sort((a, b) => (a.end < b.end ? -1 : 1));
+  if (!list.length) return null;
+  const open = list.find((b) => (!b.start || b.start <= today) && b.end >= today);
+  if (open) return { ...open, list };
+  const next = list.find((b) => b.start && b.start > today);
+  if (next) return { ...next, list };
+  return { ...list[list.length - 1], list };
+}

@@ -54,6 +54,79 @@
           "工業"
         ]
       }
+    },
+    {
+      "id": "tenacity-integrate-energy",
+      "agency": "經濟部商業發展署",
+      "title": "提升商業服務業營運效能強化韌性計畫：整合型補助（AI 能源管理）",
+      "pages": [
+        "https://www.smebiz.org.tw/project-tenacity_integrate.php"
+      ],
+      "batches": true,
+      "batch_category": "AI能源管理",
+      "fields": {
+        "summary": "導入或優化 AI 智慧能源管理系統與節能設備，整合至少 3 處改善場域（契約容量合計 500kW 以上），節能率須達 10% 以上，並由能源技術服務業（ESCO）執行節能績效量測驗證。",
+        "target_types": [
+          "服務業"
+        ],
+        "tags": [
+          "節能專案"
+        ]
+      }
+    },
+    {
+      "id": "tenacity-integrate-ops",
+      "agency": "經濟部商業發展署",
+      "title": "提升商業服務業營運效能強化韌性計畫：整合型補助（智慧營運整合）",
+      "pages": [
+        "https://www.smebiz.org.tw/project-tenacity_integrate.php#smart-ops"
+      ],
+      "batches": true,
+      "batch_category": "智慧營運整合",
+      "fields": {
+        "summary": "導入 AI、AIoT、智慧設備與數據分析等軟硬體應用，整合至少 3 處場域並帶動 200 家往來業者或服務據點共同參與。",
+        "target_types": [
+          "服務業"
+        ],
+        "tags": [
+          "AI 數位轉型"
+        ]
+      }
+    },
+    {
+      "id": "tenacity-case",
+      "agency": "經濟部商業發展署",
+      "title": "提升商業服務業營運效能強化韌性計畫：個案補助（多店升級）",
+      "pages": [
+        "https://www.smebiz.org.tw/project-tenacity_case.php"
+      ],
+      "batches": true,
+      "fields": {
+        "summary": "連鎖加盟、場域合作或供應鏈業者帶領多家店家共同導入 AI 工具（可選項目含碳排／能源管理），強化營運效能。",
+        "target_types": [
+          "服務業"
+        ],
+        "tags": [
+          "AI 數位轉型"
+        ]
+      }
+    },
+    {
+      "id": "tenacity-shop",
+      "agency": "經濟部商業發展署",
+      "title": "提升商業服務業營運效能強化韌性計畫：個案補助（單店導入）",
+      "pages": [
+        "https://www.smebiz.org.tw/project-tenacity_shop.php"
+      ],
+      "fields": {
+        "summary": "補助單一店家導入「商業服務業智慧轉型專區」上架的 AI／數位轉型方案（訂閱 6 個月以上）。",
+        "target_types": [
+          "服務業"
+        ],
+        "tags": [
+          "AI 數位轉型"
+        ]
+      }
     }
   ],
   "title_watch": [

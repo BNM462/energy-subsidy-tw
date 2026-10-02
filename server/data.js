@@ -7,7 +7,7 @@ const JSON_FIELDS = ['target_types', 'amount_details', 'source_urls', 'attachmen
 export const OVERRIDABLE = [
   'title', 'agency', 'announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text',
   'until_quota', 'status_flag', 'target', 'target_types', 'amount_text', 'amount_details', 'summary',
-  'content', 'official_url', 'hidden', 'delegate', 'display_title', 'target_points', 'ongoing', 'period_text',
+  'content', 'official_url', 'hidden', 'delegate', 'display_title', 'target_points', 'ongoing', 'period_text', 'tags',
 ];
 
 function parseRow(row) {
@@ -53,7 +53,7 @@ export function applyOverrides(sub, { overrides, excluded }) {
 
 const LIST_COLUMNS = `id, title, agency, announce_date, year, apply_start, apply_end, apply_end_time, deadline_text,
   until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status, delegate,
-  program_name, period_varies, source_urls, first_seen_at, updated_at, views, hidden`;
+  program_name, period_varies, period_text, source_urls, first_seen_at, updated_at, views, hidden`;
 
 /** 常態／多年期辦理的重點計畫：今年仍在期程內（或期程未明）就顯示 */
 export function ongoingVisible(s, year) {
