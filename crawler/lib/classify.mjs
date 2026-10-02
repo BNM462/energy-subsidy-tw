@@ -49,7 +49,7 @@ export function titleWorthFetching(title) {
 }
 
 // 核心節能詞：內文判定時至少要有一個（避免只因「照明」「綠建築」等附帶字眼誤判）
-const CORE = new Set(['節能', '節約能源', '能源效率', '節電', 'ESCO', '能源管理', '深度節能', '廢熱回收', '高效率設備', '設備汰換']);
+const CORE = new Set(['節能', '節約能源', '能源效率', '節電', 'ESCO', '能源管理', '深度節能', '廢熱回收', '高效率設備']);
 
 /**
  * 以標題＋內文判斷。回傳 { isSubsidy, reason, signals }

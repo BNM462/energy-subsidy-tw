@@ -77,7 +77,9 @@ export function extractListLinks(html, baseUrl) {
     rowText = rowText.replace(text, ' ').replace(title, ' ');
     // 連結文字開頭的日期（例：「(115-09-30) 標題」）也是發布日期
     const lead = /^\s*[\(（\[【]?\s*(\d{2,4}[-/.]\d{1,2}[-/.]\d{1,2})/.exec(text);
-    const d = findDates(rowText)[0] || (lead && findDates(lead[1])[0]);
+    // 連結文字結尾的「115-04-10」格式（衛福部等網站的發布日期寫法）
+    const trail = /(\d{2,4}-\d{1,2}-\d{1,2})\s*$/.exec(text);
+    const d = findDates(rowText)[0] || (lead && findDates(lead[1])[0]) || (trail && findDates(trail[1])[0]);
     if (d) date = d.iso;
     const prev = out.get(url);
     if (!prev || (!prev.date && date) || title.length > prev.title.length) out.set(url, { url, title, date: date || prev?.date || null });

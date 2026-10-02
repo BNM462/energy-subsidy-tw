@@ -48,6 +48,8 @@ test('節能補助判定：看內容不是只看名稱', () => {
   assert.ok(!classify({ title: '經濟部推動產業儲能補助', text: '補助儲能系統建置。' }).isSubsidy);
   // 太陽光電＋實質節能 → 收錄
   assert.ok(classify({ title: '公告節能及太陽光電設備補助', text: '補助汰換高效率空調、LED 照明及設置太陽光電。' }).isSubsidy);
+  // 真實誤判案例：公共安全設施補助只提到空調、設備汰換，沒有節能 → 不收錄
+  assert.ok(!classify({ title: '公告115年度「精神復健機構改善公共安全設施設備補助計畫」申請作業須知', text: '補助項目：消防設備、空調設備汰換、緊急發電機馬達。' }).isSubsidy);
   // 非補助公告
   assert.ok(!classify({ title: '節能標竿獎頒獎典禮', text: '節能 節電' }).isSubsidy);
   assert.ok(!titleWorthFetching('經濟部能源署技士職缺錄取公告'));

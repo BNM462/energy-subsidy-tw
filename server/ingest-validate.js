@@ -82,6 +82,7 @@ export function validateSubsidy(s) {
     content_hash: str(s.content_hash, 64),
     first_seen_at: str(s.first_seen_at, 40, { required: true, name: 'first_seen_at' }),
     updated_at: str(s.updated_at, 40, { required: true, name: 'updated_at' }),
+    hidden: !!s.hidden,
   };
 }
 

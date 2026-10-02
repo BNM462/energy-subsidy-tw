@@ -66,7 +66,9 @@
     {
       "id": "cda",
       "agency": "經濟部商業發展署",
-      "homepage": "https://www.aoc.gov.tw/"
+      "homepage": "https://www.aoc.gov.tw/",
+      "enabled": false,
+      "note": "網站拒絕海外連線（HTTP 403，GitHub Actions 主機位於國外）；該署補助公告亦刊登於經濟部本部網站，已由「經濟部」來源涵蓋"
     },
     {
       "id": "trade",
@@ -150,7 +152,9 @@
     {
       "id": "moc",
       "agency": "文化部",
-      "homepage": "https://www.moc.gov.tw/"
+      "homepage": "https://www.moc.gov.tw/",
+      "enabled": false,
+      "note": "網站拒絕海外連線（HTTP 403）；文化部補助多為文化藝術類，與節能無關"
     },
     {
       "id": "moda",

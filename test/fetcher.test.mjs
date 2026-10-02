@@ -15,6 +15,9 @@ test('列表頁：下一頁、日期取自同列而非標題', () => {
   assert.equal(findNextPage(html, 'https://x.gov.tw/list'), 'https://x.gov.tw/list?page=2');
   assert.equal(findNextPage('<a href="javascript:__doPostBack()">下一頁</a>', 'https://x.gov.tw/'), null);
   assert.equal(cleanTitle('開新分頁下載116年度須知.pdf'), '116年度須知');
+  // 衛福部列表：連結文字結尾的「115-04-10」為發布日期
+  const mohw = extractListLinks('<ul><li><a href="/cp-1.html">公告115年度某補助計畫申請作業須知115-04-10</a></li></ul>', 'https://www.mohw.gov.tw/lp-18-1.html');
+  assert.equal(mohw[0].date, '2026-04-10');
 });
 
 test('轉址頁與機器人防護偵測', () => {

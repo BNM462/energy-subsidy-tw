@@ -16,7 +16,7 @@ import { normalizeText, toAdYear } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '1';
+const EXTRACTOR_VERSION = '2';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;
@@ -217,6 +217,7 @@ async function main() {
   const docs = [];
   const deadUrls = new Set();
   const aliveUrls = new Set();
+  const withdrawnUrls = new Set();
   await mapLimit(batch, 6, async (c) => {
     if (Date.now() - startedMs > TIME_BUDGET_MS) return;
     const st = urlState.get(c.url);
@@ -254,6 +255,8 @@ async function main() {
     }
     rec.title = title.slice(0, 300);
     if (!cls.isSubsidy) {
+      // 先前判為補助、重新判定後不符合 → 自動撤下（資料保留在資料庫，只是不公開）
+      if (st?.verdict === 'subsidy') withdrawnUrls.add(c.url);
       rec.verdict = 'not';
       rec.reason = cls.reason;
       return;
@@ -347,8 +350,19 @@ async function main() {
       merged.updated_at = match.updated_at || nowIso();
     }
     merged.first_seen_at ||= rec.first_seen_at;
+    merged.hidden = 0;
     subsidies.set(merged.id, merged);
     upserts.set(merged.id, merged);
+  }
+
+  // 重新判定為非節能補助 → 撤下
+  for (const s of subsidies.values()) {
+    if (!s.hidden && withdrawnUrls.has(s.official_url)) {
+      const u = { ...s, hidden: 1, updated_at: nowIso() };
+      subsidies.set(s.id, u);
+      upserts.set(s.id, u);
+      dataChanged = true;
+    }
   }
 
   // 官方網址失效／恢復
