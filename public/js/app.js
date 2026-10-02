@@ -190,7 +190,7 @@ function renderDetail(d, box) {
     let t = String(s || '')
       .replace(/[（(]\s*另開新視窗\s*[）)]|[（(]\s*[\d.]+\s*[KMG]?B\s*[）)]|^開啟\s*|\s*檔案$/gi, '')
       .trim()
-      .replace(/^開啟s*/, '');
+      .replace(/^開啟\s*/, '');
     const m = /^(.{6,}?)(?:PDF|ODT|DOCX?)?\s+\1/i.exec(t);
     if (m) t = t.slice(m[0].length - m[1].length).trim();
     return t;
