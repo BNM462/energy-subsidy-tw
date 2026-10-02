@@ -94,6 +94,13 @@ test('真實案例：標題中的「受理申請期間」不可誤抓發文日�
   assert.equal(p.endTime, '17:30');
 });
 
+test('真實案例：衛福部網頁使用相容表意字「年」(U+F98E)', () => {
+  const text = '三、申請期限:自115年6月8日起至115年6月30日止（以郵戳日期為準）。';
+  const p = extractPeriod(text, { announceDate: '2026-05-29' });
+  assert.equal(p.start, '2026-06-08');
+  assert.equal(p.end, '2026-06-30');
+});
+
 test('沒有日期時不推測', () => {
   const p = extractPeriod('申請方式請洽主辦單位');
   assert.equal(p.start, null);

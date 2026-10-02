@@ -16,7 +16,7 @@ import { normalizeText, toAdYear } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '2';
+const EXTRACTOR_VERSION = '3';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;

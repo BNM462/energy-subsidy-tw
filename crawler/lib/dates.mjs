@@ -4,9 +4,14 @@
 const FULLWIDTH = /[０-９／．－：～]/g;
 const FW_MAP = { '／': '/', '．': '.', '－': '-', '：': ':', '～': '~' };
 
-/** 全形數字、符號轉半形，並統一空白 */
+/**
+ * 全形數字、符號轉半形，並統一空白。
+ * NFKC 會把外觀相同的「相容表意字」（例：衛福部網頁中的「年」U+F98E）轉為標準字（U+5E74）。
+ */
 export function normalizeText(s) {
   return String(s ?? '')
+    // 只轉換相容表意字與康熙部首，保留官方原文的全形標點
+    .replace(/[⺀-⿟豈-﫿]|[\u{2F800}-\u{2FA1F}]/gu, (c) => c.normalize('NFKC'))
     .replace(FULLWIDTH, (c) => FW_MAP[c] ?? String.fromCharCode(c.charCodeAt(0) - 0xfee0))
     .replace(/[ 　\t]+/g, ' ')
     .replace(/\r/g, '');
