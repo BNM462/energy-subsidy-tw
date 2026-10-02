@@ -270,3 +270,12 @@ details.raw .content { margin-top: 8px; }
   .fact.f-amount { border-left: 0; }
 }
 .detail[hidden] { display: none; }
+
+/* 智慧小幫手：今日額度用完提示 */
+.msg.quota { align-self: stretch; max-width: 100%; background: var(--surface); border: 1px solid var(--brand); border-left: 4px solid var(--brand); white-space: normal; }
+.msg.quota p { margin: 0 0 6px; }
+.msg.quota p:last-child { margin-bottom: 0; }
+.quota-title { font-weight: 700; color: var(--text); }
+.quota-contact { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.quota-contact a { font-weight: 700; font-size: 1.05rem; }
+.examples button:disabled { opacity: .5; cursor: not-allowed; }

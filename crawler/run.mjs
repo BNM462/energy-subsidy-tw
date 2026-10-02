@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fetchPage, fetchResource, mapLimit } from './lib/fetcher.mjs';
 import { discoverListPages, SUBSIDY_ZONE_TEXT, sameAgency } from './lib/discover.mjs';
 import { extractListLinks, extractMain, findNextPage, extractRowDocs } from './lib/html.mjs';
-import { classify, titleWorthFetching, energySignals } from './lib/classify.mjs';
+import { classify, titleWorthFetching, energySignals, NEGATIVE_TITLE } from './lib/classify.mjs';
 import { extractFields, briefLooksValid } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
 import { dedupeKey, idFromKey, findMatch, sha1 } from './lib/dedupe.mjs';
@@ -46,6 +46,9 @@ const { sources } = readJson('./config/sources.json');
 const overridesCfg = readJson('./config/manual_overrides.json').overrides || [];
 const exclusionsCfg = readJson('./config/exclusions.json').exclusions || [];
 const programsCfg = readJson('./config/programs.json').programs || [];
+// 關注補助：標題符合關鍵字即收錄，並在首次發現時通知（不限哪個機關的網站）
+const titleWatch = (readJson('./config/programs.json').title_watch || []).map((w) => ({ ...w, re: new RegExp(w.pattern) }));
+const watchMatch = (title) => titleWatch.find((w) => w.re.test(normalizeText(title || ''))) || null;
 const excludedTargets = new Set(exclusionsCfg.map((x) => x.target));
 
 // ---------- 狀態 ----------
@@ -200,9 +203,10 @@ async function main() {
           for (const l of links) {
             if (!(sameAgency(l.url, src.homepage) || isGovUrl(l.url))) continue;
             if (excludedTargets.has(l.url)) continue;
-            if (!titleWorthFetching(l.title)) continue;
+            const watch = watchMatch(l.title);
+            if (!watch && !titleWorthFetching(l.title)) continue;
             if (l.date && l.date < minDate) continue;
-            if (!candidates.has(l.url)) candidates.set(l.url, { ...l, source: src });
+            if (!candidates.has(l.url)) candidates.set(l.url, { ...l, source: src, watch });
           }
           const dated = links.filter((l) => l.date);
           const reachedOld = dated.length && dated.every((l) => l.date < minDate);
@@ -275,6 +279,7 @@ async function main() {
   const aliveUrls = new Set();
   const withdrawnUrls = new Set();
   const programWarnings = [];
+  const watchHits = [];
   await mapLimit(batch, 6, async (c) => {
     if (Date.now() - startedMs > TIME_BUDGET_MS) return;
     const st = urlState.get(c.url);
@@ -314,6 +319,11 @@ async function main() {
     let cls = c.program
       ? { isSubsidy: true, reason: '重點補助監測清單', signals: energySignals(main.text) }
       : classify({ title, text: main.text });
+    // 關注補助：已由人工確認為節能補助，標題符合就收錄（名單、說明會等非公告仍排除）
+    if (c.watch && !cls.isSubsidy && !NEGATIVE_TITLE.test(normalizeText(title))) {
+      cls = { isSubsidy: true, reason: `關注補助：${c.watch.title}`, signals: energySignals(main.text) };
+    }
+    if (c.watch && cls.isSubsidy && !st) watchHits.push({ name: c.watch.title, title, url: c.url, agency: c.source.agency });
     let attText = programDocText;
     // 內文很短（詳見附件）時，讀附件再判斷一次
     if (!cls.isSubsidy && titleWorthFetching(title) && main.text.replace(/\s/g, '').length < 600 && main.attachments.length) {
@@ -329,10 +339,11 @@ async function main() {
       return;
     }
     if (!attText && main.attachments.length) attText = await attachmentsText(main.attachments);
-    const f = extractFields({ title, text: main.text, listDate: c.date, attachmentText: attText });
+    const f = extractFields({ title, text: main.text, listDate: c.date, attachmentText: attText, attachmentLabels: main.attachments.map((x) => x.label) });
     // 公告年度：公告日期 → 列表日期 → 標題明寫的年度（如「115年度」）；都沒有就是未知（不顯示在當年度清單，但保留資料）
     const ty = /(?<!\d)(\d{2,3})\s*年度/.exec(normalizeText(`${title} ${main.heading || ''} ${main.pageTitle || ''}`));
-    const docYear = f.announce_date ? +f.announce_date.slice(0, 4) : c.date ? +c.date.slice(0, 4) : ty ? toAdYear(ty[1]) : null;
+    // 公告年度：公告日期 → 列表日期 → 發文字號年份 → 標題中的年度
+    const docYear = f.announce_date ? +f.announce_date.slice(0, 4) : c.date ? +c.date.slice(0, 4) : f.doc_year || (ty ? toAdYear(ty[1]) : null);
     rec.verdict = 'subsidy';
     rec.reason = cls.signals.join('、').slice(0, 200);
     docs.push({
@@ -478,6 +489,13 @@ async function main() {
     }
   }
 
+  // 關注補助：只通知今年（含以後）的新公告
+  const currentWatchHits = watchHits.filter((h) => {
+    const rec = urlUpdates.find((u) => u.url === h.url);
+    const sub = rec && subsidies.get(rec.subsidy_id);
+    return sub && sub.year >= year;
+  });
+
   const finishedAt = nowIso();
   const stats = {
     sources: sourceResults.length,
@@ -511,7 +529,7 @@ async function main() {
   const failing = sourceResults.filter((s) => s.consecutive_failures >= 6);
   writeFileSync(
     new URL('last-run.json', OUT_DIR),
-    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), program_warnings: programWarnings, errors }, null, 2),
+    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), program_warnings: programWarnings, watch_hits: currentWatchHits, errors }, null, 2),
   );
 
   if (DRY) {

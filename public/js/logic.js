@@ -224,7 +224,7 @@ export function displayTitle(sub) {
   name = name
     .replace(/^\s*(\[[^\]]*\]|【[^】]*】)\s*/, '')
     .replace(/^(公告|修正|訂定|徵求)\s*/, '')
-    .replace(/^(中華民國)?\s*\d{2,4}\s*(年度|年)\s*[-－–—:：]?\s*/, '')
+    .replace(/^(中華民國)?\s*(\d{2,4}|一百[零一二三四五六七八九十]{0,3})\s*(年度|年)\s*[-－–—:：]?\s*/, '')
     .replace(/[（(](修正版|已結束|已結束申請|更新版?)[）)]\s*$/, '')
     .replace(/(作業要點|補助要點|作業規範|申請須知|須知|相關規定公告|相關規定|公告)$/, '')
     .replace(/要點$/, '')
@@ -239,7 +239,13 @@ export function titleTags(sub) {
   const t = String(sub.title || '');
   const tags = [];
   const y = /(?<!\d)(\d{3})\s*(年度|年)/.exec(t);
+  const cy = /一百(零)?(?:([一二三四五六七八九]?)十)?([一二三四五六七八九])?\s*(年度|年)/.exec(t);
   if (y) tags.push(`${y[1]}年度`);
+  else if (cy) {
+    const D = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+    const tens = /十/.test(cy[0]) ? (cy[2] ? D[cy[2]] : 1) : 0;
+    tags.push(`${100 + tens * 10 + (cy[3] ? D[cy[3]] : 0)}年度`);
+  }
   const b = /第\s*([一二三四五六七八九十\d]+)\s*(梯次|梯|次|期)/.exec(t);
   if (b) tags.push(`第${/^\d+$/.test(b[1]) ? CN_NUM[+b[1] - 1] || b[1] : b[1]}梯次`);
   return tags;

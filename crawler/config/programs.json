@@ -19,7 +19,9 @@
           "除濕機：500／900／1,200 元（依額定除濕能力級距）"
         ],
         "target": "購買符合規定新電冰箱、冷（暖）氣機或除濕機（非供銷售且無退換貨）之買受人",
-        "target_types": ["民眾"]
+        "target_types": [
+          "民眾"
+        ]
       }
     },
     {
@@ -27,23 +29,40 @@
       "agency": "經濟部能源署",
       "delegate": "財團法人台灣綠色生產力基金會",
       "title": "ISO 50001 能源管理系統與碳盤查示範輔導",
-      "pages": ["https://www.tgpf.org.tw/event/even-115011901.htm"],
+      "pages": [
+        "https://www.tgpf.org.tw/event/even-115011901.htm"
+      ],
       "fields": {
         "summary": "協助服務業用戶建置 ISO 50001 能源管理系統並完成碳盤查，可委託執行單位或自選合格輔導單位進行輔導。",
         "target": "服務業部門依法設立登記滿 2 年且持續營運、未曾取得 ISO 50001 驗證之用戶（一般用戶：契約容量 500kW 以上；企業集團用戶：2 處以上營業據點）",
-        "target_types": ["服務業"]
+        "target_types": [
+          "服務業"
+        ]
       }
     },
     {
       "id": "moeai-plus",
       "agency": "經濟部產業發展署",
       "title": "產業競爭力輔導團（AI 診斷輔導＋研發與設備汰換補助）",
-      "pages": ["https://eii.nat.gov.tw/moeai-plus/"],
+      "pages": [
+        "https://eii.nat.gov.tw/moeai-plus/"
+      ],
       "ongoing": true,
       "fields": {
         "summary": "製造業經輔導團 AI 診斷後可申請 AI 工具導入補助；後續研發轉型階段提供研發與設備汰換補助，透過 AI 優化生產系統、提升效率。",
-        "target_types": ["工業"]
+        "target_types": [
+          "工業"
+        ]
       }
     }
-  ]
+  ],
+  "title_watch": [
+    {
+      "id": "abri-public-building",
+      "title": "中央政府公有既有建築物及建築公共緊急避難空間能效改善及淨零示範補助",
+      "pattern": "公有既有建築物.{0,40}能效改善|能效改善及淨零示範",
+      "note": "2026-10 承辦表示近期將發公告，可能不在建研所原網址；任何機關列表出現符合標題即收錄並通知"
+    }
+  ],
+  "_說明_title_watch": "關注補助（title_watch）：任何來源列表中，標題符合 pattern 的公告都會收錄（不需再判斷是否為節能補助），並在首次發現今年度公告時寄信通知。"
 }

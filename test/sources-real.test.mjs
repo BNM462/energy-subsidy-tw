@@ -1,7 +1,7 @@
 // 以真實官方頁面片段建立的回歸測試
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPeriod, detectStatusFlag } from '../crawler/lib/dates.mjs';
+import { extractPeriod, detectStatusFlag, normalizeText as normalizeTextForTest } from '../crawler/lib/dates.mjs';
 import { extractFields, extractDelegate, extractTarget } from '../crawler/lib/extract.mjs';
 import { extractRowDocs } from '../crawler/lib/html.mjs';
 import { normalizeName, similarity } from '../crawler/lib/dedupe.mjs';
@@ -86,6 +86,18 @@ test('經費用罄：只有「已經發生」才標示，規定與假設語氣�
 
 test('執行期程在上一行：不是申請期間', () => {
   assert.equal(extractPeriod('執行期程\n自輔導計畫通過申請日起至115年12月31日止。').end, null);
+});
+
+test('建研所：國字年份、附件檔名公文日期、「某日前」截止', () => {
+  const f = extractFields({
+    title: '訂定「一百十五年度中央政府公有既有建築物及建築公共緊急避難空間能效改善及淨零示範補助計畫申請補助作業須知」，並自即日生效。',
+    text: '三、請中央政府與其所屬機關（構）及各級國立學校，統籌所屬之公有既有建築物辦理申請，並於本須知函頒日起30日內（114年9月17日前），將申請提案之基本資料函送本所辦理。',
+    attachmentLabels: ['pdf [另開新視窗]114年8月19日台內建研字第1147638669號-115年度…作業須知.PDF.pdf'],
+  });
+  assert.equal(f.announce_date, '2025-08-19');
+  assert.equal(f.apply_end, '2025-09-17');
+  assert.equal(normalizeTextForTest('一百十六年度'), '116年度');
+  assert.ok(!titleWorthFetching('內政部核定115年度補助中央政府公有既有建築物…之申請案件入選排序名單。'));
 });
 
 test('ISO 50001：「輔導期程」不是申請期間', () => {

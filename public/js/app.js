@@ -284,12 +284,36 @@ function addMsg(kind, text) {
   node.scrollIntoView({ block: 'end' });
 }
 
+// 額度用完時顯示的諮詢服務資訊
+const CONTACT = { company: '亮鉅股份有限公司', phone: '07-5360320' };
+
+/** 今日額度用完的提示（含專人諮詢資訊），同一頁面只顯示一次 */
+function showQuotaNotice(limit) {
+  if ($('#quota-notice')) return;
+  const tel = CONTACT.phone.replace(/[^\d+]/g, '');
+  const box = el('div', { class: 'msg quota', id: 'quota-notice' },
+    el('p', { class: 'quota-title', text: `您今日的 ${limit} 次智慧小幫手使用額度已用完，如有問題請明日再詢問。` }),
+    el('p', {}, '如有想申請的計畫，也可以聯絡專人為您提供諮詢服務：'),
+    el('p', { class: 'quota-contact' },
+      el('strong', { text: CONTACT.company }),
+      el('br'),
+      '服務專線：', el('a', { href: `tel:${tel}`, text: CONTACT.phone }),
+    ),
+  );
+  $('#chat-log').append(box);
+  box.scrollIntoView({ block: 'end' });
+}
+
 function setRemaining(remaining, limit) {
   $('#chat-remaining').textContent = `今日剩餘 ${remaining} 次`;
   const out = remaining <= 0;
   $('#chat-input').disabled = out;
   $('#chat-send').disabled = out;
-  if (out) $('#chat-input').placeholder = `您今日的 ${limit} 次智慧小幫手使用額度已用完，明日即可再次使用。`;
+  for (const b of document.querySelectorAll('#chat-examples button')) b.disabled = out;
+  if (out) {
+    $('#chat-input').placeholder = '今日使用額度已用完，明日即可再次使用。';
+    showQuotaNotice(limit);
+  }
 }
 
 async function refreshQuota() {
@@ -313,7 +337,7 @@ async function ask(question) {
     const r = await api('/api/ask', { method: 'POST', body: JSON.stringify({ question }) });
     waiting.remove();
     if (r.ok) addMsg('bot', r.answer);
-    else addMsg('sys', r.message);
+    else if (!r.quota_exceeded) addMsg('sys', r.message); // 額度用完的訊息由 showQuotaNotice 顯示
     setRemaining(r.remaining, r.limit);
   } catch (e) {
     waiting.remove();

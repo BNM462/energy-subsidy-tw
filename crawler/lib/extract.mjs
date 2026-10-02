@@ -1,6 +1,6 @@
 // 從官方內文擷取補助欄位。原則：只擷取官方原文，抓不到就是 null（前台顯示「官方未明載」）。
 
-import { normalizeText, extractPeriod, detectStatusFlag, extractAnnounceDate } from './dates.mjs';
+import { normalizeText, extractPeriod, detectStatusFlag, extractAnnounceDate, findDates, toAdYear } from './dates.mjs';
 
 const UNIT = { 億: 1e8, 萬: 1e4, 千: 1e3, 元: 1 };
 
@@ -210,10 +210,14 @@ export function extractIdentifiers(title, text) {
  * 主要擷取函式。
  * input: { title, text, listDate, attachmentText }
  */
-export function extractFields({ title, text, listDate = null, attachmentText = '' }) {
+export function extractFields({ title, text, listDate = null, attachmentText = '', attachmentLabels = [] }) {
   const body = normalizeText(text || '');
   const all = body + '\n' + normalizeText(attachmentText || '');
-  const announce = extractAnnounceDate(body) || listDate || null;
+  // 公告日期：內文標示 → 列表日期 → 附件檔名中的公文日期（例：「114年8月19日台內建研字第…號」）
+  const labelDate = attachmentLabels
+    .map((l) => /(\d{2,3}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)\s*\S{0,6}字第/.exec(normalizeText(l)))
+    .find(Boolean);
+  const announce = extractAnnounceDate(body) || listDate || (labelDate ? findDates(labelDate[1])[0]?.iso : null) || null;
   // 期程以網頁內文為主，網頁沒有才看附件
   let period = extractPeriod(body, { announceDate: announce });
   if (!period.start && !period.end && attachmentText) period = extractPeriod(all, { announceDate: announce });
@@ -240,5 +244,10 @@ export function extractFields({ title, text, listDate = null, attachmentText = '
     doc_no: ids.docNo,
     program_name: ids.programName,
     delegate: extractDelegate(body),
+    // 發文字號前 3 碼是發文的民國年（例：台內建研字第1147638669號 → 114 年），用於推算公告年度
+    doc_year: (() => {
+      const d = /字第(\d{3})\d{4,}號/.exec(ids.docNo || '');
+      return d ? toAdYear(d[1]) : null;
+    })(),
   };
 }

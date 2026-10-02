@@ -14,7 +14,18 @@ export function normalizeText(s) {
     .replace(/[⺀-⿟豈-﫿]|[\u{2F800}-\u{2FA1F}]/gu, (c) => c.normalize('NFKC'))
     .replace(FULLWIDTH, (c) => FW_MAP[c] ?? String.fromCharCode(c.charCodeAt(0) - 0xfee0))
     .replace(/[ 　\t]+/g, ' ')
-    .replace(/\r/g, '');
+    .replace(/\r/g, '')
+    // 國字年份（一百十五年度 → 115年度），只轉換後面接「年」的數字
+    .replace(/(一百[零一二三四五六七八九十]{0,3})(?=\s*年)/g, (m) => String(cnNumber(m) ?? m));
+}
+
+/** 國字數字轉阿拉伯數字（支援一百至一百九十九，例：一百十五、一百一十五、一百零五） */
+export function cnNumber(s) {
+  const D = { 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  const m = /^一百(零)?(?:([一二三四五六七八九]?)十)?([一二三四五六七八九])?$/.exec(s);
+  if (!m) return null;
+  const tens = /十/.test(s) ? (m[2] ? D[m[2]] : 1) : 0;
+  return 100 + tens * 10 + (m[3] ? D[m[3]] : 0);
 }
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -179,6 +190,15 @@ export function extractPeriod(text, { announceDate = null } = {}) {
     candidates.push({ seg: t.slice(m.index, m.index + m[0].length + 20) });
   }
 
+  // 只有截止日的寫法：「（114年9月17日前），將申請提案…函送本所」「請於115年3月31日前提出申請」
+  const DATE = String.raw`\d{2,4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日\s*[)）]?\s*前`;
+  const ACT = '申請|提案|函送|報名|送件|提出|送達|收件';
+  const deadline = new RegExp(`(?:(?:${ACT})[^。\\n]{0,50}?${DATE})|(?:${DATE}[^。\\n]{0,40}?(?:${ACT}))`, 'g');
+  while ((m = deadline.exec(t))) {
+    if (NON_APPLY.test(t.slice(Math.max(0, m.index - 20), m.index) + m[0])) continue;
+    candidates.push({ seg: m[0] });
+  }
+
   for (const c of candidates) {
     if (c.multi) {
       const parts = c.multi.map((line) => parseSentence(line, announceDate)).filter(Boolean);
@@ -224,7 +244,7 @@ function parseSentence(sentence, announceDate) {
     }
     if (!dates.length && !fromToday) return null;
 
-    const isDeadlineOnly = /截止|期限|前(送達|提出|寄達|申請)|為止|止$/.test(sentence) && dates.length === 1 && !/(至|到|~|迄)/.test(sentence.slice(0, dates[0].index));
+    const isDeadlineOnly = /截止|期限|前(送達|提出|寄達|申請)|為止|止$|日\s*[)）]?\s*前/.test(sentence) && dates.length === 1 && !/(至|到|~|迄)/.test(sentence.slice(0, dates[0].index));
     // 起訖必須是以「至／~／到／迄」相連的兩個日期（避免把發布日期當成開始日）
     let pair = null;
     for (let i = 0; i + 1 < dates.length && !pair; i++) {

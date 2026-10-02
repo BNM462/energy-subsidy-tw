@@ -56,6 +56,13 @@ if (process.env.TEST_NOTIFY === '1') {
   process.exit(0);
 }
 
+// 關注補助：首次發現今年度公告時，另開一張通知（不是異常）
+if ((report.watch_hits || []).length) {
+  const lines = report.watch_hits.map((h) => `- 【${h.name}】${h.agency}：${h.title}\n  ${h.url}`);
+  gh('issue', 'create', '--title', '📢 發現關注中的補助公告', '--body', `${mention}系統發現你關注的補助已有新公告，已自動收錄到網站：\n\n${lines.join('\n')}\n\n請抽查日期與內容是否正確。看完可直接關閉此問題單。`);
+  console.log('已通知關注補助');
+}
+
 if (problems.length) {
   const body = [
     `${mention}自動檢查發現以下問題（其他來源與既有資料不受影響，網站仍正常運作）：`,
