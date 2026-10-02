@@ -1,0 +1,27 @@
+name: 每兩週補助摘要
+
+# 每週一上午 9 點（台灣時間）檢查，偶數週寄出（即每兩週一次）。可手動執行立即寄出。
+on:
+  schedule:
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 產生並寄出摘要
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_BASE: ${{ vars.API_BASE }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: node .github/scripts/digest.mjs
