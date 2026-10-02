@@ -55,10 +55,16 @@ export async function onRequestPost({ request, env }) {
   for (const s of body.upserts) {
     const values = SUB_COLS.map((c) => (JSON_COLS.has(c) ? JSON.stringify(s[c] ?? []) : c === 'until_quota' || c === 'hidden' || c === 'period_varies' ? (s[c] ? 1 : 0) : s[c] ?? null));
     const updates = SUB_COLS.filter((c) => c !== 'id' && c !== 'first_seen_at').map((c) => `${c} = excluded.${c}`);
+    // 去重鍵若已被另一筆補助使用（例如舊年度資料），自動加上編號後綴，避免整批寫入失敗
+    const placeholders = SUB_COLS.map((c, i) =>
+      c === 'dedupe_key'
+        ? `CASE WHEN EXISTS (SELECT 1 FROM subsidies WHERE dedupe_key = ?${i + 1} AND id <> ?1) THEN ?${i + 1} || '|' || ?1 ELSE ?${i + 1} END`
+        : `?${i + 1}`,
+    );
     stmts.push(
       db
         .prepare(
-          `INSERT INTO subsidies (${SUB_COLS.join(', ')}) VALUES (${SUB_COLS.map(() => '?').join(', ')})
+          `INSERT INTO subsidies (${SUB_COLS.join(', ')}) VALUES (${placeholders.join(', ')})
            ON CONFLICT(id) DO UPDATE SET ${updates.join(', ')}`,
         )
         .bind(...values),
