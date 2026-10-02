@@ -91,7 +91,14 @@ export async function onRequestPost({ request, env }) {
   stmts.push(db.prepare('DELETE FROM scan_log WHERE id <= (SELECT MAX(id) - 1000 FROM scan_log)'));
 
   // 每個 D1 batch 為一個交易；所有寫入皆為 upsert，即使中途失敗，下一輪重送也不會產生重複資料
-  for (let i = 0; i < stmts.length; i += 80) await db.batch(stmts.slice(i, i + 80));
+  for (let i = 0; i < stmts.length; i += 80) {
+    try {
+      await db.batch(stmts.slice(i, i + 80));
+    } catch (e) {
+      // 回報資料庫錯誤原因（不含任何密鑰），方便從爬蟲執行紀錄判斷
+      return error(500, `資料庫寫入失敗（第 ${i + 1} 項起）：${String(e?.message || e).slice(0, 300)}`);
+    }
+  }
 
   return json({ ok: true, received_at: now, statements: stmts.length });
 }
