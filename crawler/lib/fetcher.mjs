@@ -22,7 +22,7 @@ export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; compatible; EnergySubsidyTW/1.0; +https://github.com/BNM462/energy-subsidy-tw)';
 
 const HOST_DELAY_MS = 1500;
-const TIMEOUT_MS = 25000;
+const TIMEOUT_MS = Number(process.env.CRAWLER_TIMEOUT_MS) || 25000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
@@ -80,8 +80,30 @@ function requestOnce(url, { accept, timeout, limit }) {
   };
   const ck = cookieHeader(u.host);
   if (ck) headers.cookie = ck;
-  return new Promise((resolve, reject) => {
+  return new Promise((resolveRaw, rejectRaw) => {
+    // 硬性逾時：連線建立後傳輸中途停住（伺服器不再送資料）時也一定會結束，避免整個程式靜默卡住
+    let settled = false;
+    const hard = setTimeout(() => {
+      req.destroy();
+      reject(new FetchError('連線逾時（傳輸中斷）'));
+    }, timeout * 2);
+    const resolve = (v) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(hard);
+      resolveRaw(v);
+    };
+    const reject = (e) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(hard);
+      rejectRaw(e);
+    };
     const req = mod.get(u, { headers, timeout }, (res) => {
+      res.on('aborted', () => reject(new FetchError('連線中斷')));
+      res.on('close', () => {
+        if (!res.complete) reject(new FetchError('連線中斷'));
+      });
       storeCookies(u.host, res.headers['set-cookie']);
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();

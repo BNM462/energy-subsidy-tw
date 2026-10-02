@@ -471,8 +471,23 @@ async function main() {
     log(`已寫入資料庫：${r.statements} 項操作`);
   }
   log('完成', JSON.stringify(stats));
+  finished = true;
   if (failing.length) log(`⚠ 連續失敗的來源：${failing.map((s) => s.agency).join('、')}`);
 }
+
+// 安全網：若有請求永遠卡住、程式在完成前就結束，必須回報失敗（觸發異常通知），不可默默當作成功
+let finished = false;
+process.on('beforeExit', () => {
+  if (finished) return;
+  console.error('爬蟲執行失敗：程式未完成就結束（可能有連線卡住）');
+  try {
+    mkdirSync(OUT_DIR, { recursive: true });
+    writeFileSync(new URL('last-run.json', OUT_DIR), JSON.stringify({ fatal: '程式未完成就結束（可能有連線卡住）' }, null, 2));
+  } catch {
+    /* ignore */
+  }
+  process.exit(1);
+});
 
 main().catch((e) => {
   console.error('爬蟲執行失敗：', e.message);
