@@ -7,7 +7,7 @@ const JSON_FIELDS = ['target_types', 'amount_details', 'source_urls', 'attachmen
 export const OVERRIDABLE = [
   'title', 'agency', 'announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text',
   'until_quota', 'status_flag', 'target', 'target_types', 'amount_text', 'amount_details', 'summary',
-  'content', 'official_url', 'hidden',
+  'content', 'official_url', 'hidden', 'delegate',
 ];
 
 function parseRow(row) {
@@ -50,10 +50,21 @@ export function applyOverrides(sub, { overrides, excluded }) {
 }
 
 const LIST_COLUMNS = `id, title, agency, announce_date, year, apply_start, apply_end, apply_end_time, deadline_text,
-  until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status,
+  until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status, delegate,
   first_seen_at, updated_at, views, hidden`;
 
-/** 指定年度（預設為台灣時間今年）的公開補助清單 */
+/**
+ * 去年公告、但今年仍在受理的補助（例：114/12/31 公告、受理至 116/01/31 的住宅家電汰舊換新節能補助）。
+ * 判斷依據只用官方期程：截止日在今年以後，或官方寫明額滿為止且未宣告結束。
+ */
+export function carriedOver(s, year) {
+  if (s.year !== year - 1) return false;
+  if (s.status_flag) return false;
+  if (s.apply_end) return s.apply_end >= `${year}-01-01`;
+  return !!s.until_quota;
+}
+
+/** 指定年度（預設為台灣時間今年）的公開補助清單：今年公告者 + 去年公告今年仍受理者 */
 export async function listSubsidies(db, { year = taipeiYear() } = {}) {
   const [{ results }, ov] = await Promise.all([
     db.prepare(`SELECT ${LIST_COLUMNS} FROM subsidies WHERE hidden = 0 AND year BETWEEN ? AND ?`).bind(year - 1, year + 1).all(),
@@ -62,7 +73,8 @@ export async function listSubsidies(db, { year = taipeiYear() } = {}) {
   return results
     .map(parseRow)
     .map((s) => applyOverrides(s, ov))
-    .filter((s) => s && s.year === year);
+    .filter((s) => s && (s.year === year || carriedOver(s, year)))
+    .map((s) => (s.year === year ? s : { ...s, carried_over: true }));
 }
 
 export async function getSubsidy(db, id) {

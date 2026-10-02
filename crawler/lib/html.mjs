@@ -87,6 +87,36 @@ export function extractListLinks(html, baseUrl) {
   return [...out.values()];
 }
 
+/**
+ * 「表格列」模式：有些列表頁每列沒有獨立連結（例：能源署節能績效保證專區），
+ * 改把每一列當成一則公告。網址使用列表頁網址加上 #識別碼（瀏覽器開啟仍是官方列表頁）。
+ */
+export function extractRowDocs(html, pageUrl) {
+  const $ = load(html);
+  $(NOISE).remove();
+  const out = [];
+  const seen = new Set();
+  $('tr, li').each((_, row) => {
+    if ($(row).find('tr, li').length) return; // 只取最內層的列
+    const cells = $(row)
+      .children('td, div, span, a, p')
+      .map((__, c) => cleanText($(c).text()).replace(/\n+/g, ' '))
+      .get()
+      .filter(Boolean);
+    const text = cleanText($(row).text()).replace(/\n+/g, ' ');
+    if (text.length < 15) return;
+    const date = findDates(cells.find((c) => /^\s*\d{2,4}[-/.]\d{1,2}[-/.]\d{1,2}\s*$/.test(c)) || '')[0]?.iso || null;
+    if (!date) return;
+    const title = cleanTitle(cells.find((c) => c.length >= 8 && !/^\d+$/.test(c)) || '');
+    if (!title || seen.has(title)) return;
+    seen.add(title);
+    const u = new URL(pageUrl);
+    u.hash = `row-${encodeURIComponent(title.slice(0, 40))}`;
+    out.push({ url: u.href, title, date, text });
+  });
+  return out;
+}
+
 /** 列表頁的「下一頁」連結（javascript postback 無法跟隨時回傳 null） */
 export function findNextPage(html, baseUrl) {
   const $ = load(html);

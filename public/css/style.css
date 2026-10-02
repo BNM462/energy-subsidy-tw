@@ -212,3 +212,4 @@ select {
   .chat-fab span { display: none; }
   .chat-fab { padding: 14px; }
 }
+.b-carry { background: var(--surface-2); color: var(--text-2); font-weight: 600; border: 1px solid var(--border); }

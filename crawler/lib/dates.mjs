@@ -77,7 +77,7 @@ export function parseDate(text) {
 
 // 申請期間標籤
 const PERIOD_LABEL =
-  /(申請期間|受理期間|受理申請期間|收件期間|申請時間|受理時間|收件時間|申請日期|受理日期|徵件期間|申請收件期間|計畫申請期間|申請截止|收件截止|截止收件|截止日期|申請期限|受理期限|開放申請|受理申請)/g;
+  /(申請補助期間|補助申請期間|受理補助申請期間|申請受理期間|申請期間|受理期間|受理申請期間|收件期間|申請時間|受理時間|收件時間|申請日期|受理日期|徵件期間|申請收件期間|計畫申請期間|申請截止|收件截止|截止收件|截止日期|申請期限|受理期限|開放申請|受理申請)/g;
 
 const UNTIL_QUOTA = /額滿為止|額滿即止|額滿截止|用罄為止|經費用(罄|完)為止|預算用(罄|完)為止|額滿即停止|用罄即停止/;
 const FLAG_PATTERNS = [
@@ -143,7 +143,8 @@ export function extractPeriod(text, { announceDate = null } = {}) {
     candidates.push(seg.slice(0, 220));
   }
   // 沒有標籤時，找「自…起至…止」「即日起至…」句型
-  const generic = /(自|即日起|於)[^。\n]{0,40}?(至|到|~|～|－|迄)[^。\n]{0,40}?(止|為止|截止)/g;
+  // 例：「於115/8/17~115/9/16受理申請」
+  const generic = /(自|即日起|於)[^。\n]{0,40}?(至|到|~|～|－|迄)[^。\n]{0,40}?(止|為止|截止|受理|收件)/g;
   while ((m = generic.exec(t))) candidates.push(t.slice(m.index, m.index + m[0].length + 20));
 
   for (const seg of candidates) {
@@ -164,11 +165,19 @@ export function extractPeriod(text, { announceDate = null } = {}) {
     if (!dates.length && !fromToday) continue;
 
     const isDeadlineOnly = /截止|期限|前(送達|提出|寄達|申請)|為止|止$/.test(sentence) && dates.length === 1 && !/(至|到|~|迄)/.test(sentence.slice(0, dates[0].index));
-    if (dates.length >= 2) {
-      result.start = dates[0].iso;
-      result.end = dates[1].iso;
-      result.endTime = parseTime(sentence.slice(dates[1].end, dates[1].end + 15));
-    } else if (fromToday && dates.length === 1) {
+    // 起訖必須是以「至／~／到／迄」相連的兩個日期（避免把發布日期當成開始日）
+    let pair = null;
+    for (let i = 0; i + 1 < dates.length && !pair; i++) {
+      const gap = sentence.slice(dates[i].end, dates[i + 1].index);
+      if (gap.length <= 24 && /(至|到|~|迄|－|-)/.test(gap) && !/[。；]/.test(gap)) pair = [dates[i], dates[i + 1]];
+    }
+    if (pair) {
+      result.start = pair[0].iso;
+      result.end = pair[1].iso;
+      result.endTime = parseTime(sentence.slice(pair[1].end, pair[1].end + 15));
+    } else if (dates.length >= 2 && !fromToday) {
+      continue;
+    } else if (fromToday && dates.length >= 1) {
       result.fromToday = true;
       result.start = announceDate;
       result.end = dates[0].iso;

@@ -26,7 +26,7 @@ export function normalizeName(title, programName = null) {
   return s
     .replace(/(中華民國)?\s*\d{2,4}\s*[-~～至]?\s*\d{0,4}\s*(年度|年)/g, '')
     .replace(/第\s*[一二三四五六七八九十\d]+\s*(梯次|次|期|波)/g, '')
-    .replace(/公告|修正|訂定|有關|本部|本署|本局|本會|辦理|受理申請|受理|申請作業|申請期間|申請|相關事宜|事宜|期間|即日起|開始|歡迎|踴躍|提案|作業要點|要點|須知|計畫書|格式|處所/g, '')
+    .replace(/公告|修正|訂定|有關|本部|本署|本局|本會|辦理|受理申請|受理|申請作業|申請期間|申請|相關事宜|事宜|期間|即日起|開始|歡迎|踴躍|提案|作業要點|要點|申請須知|須知|計畫書|格式|處所|懶人包|相關規定|規定|已結束申請|已結束|說明/g, '')
     .replace(/[\s\p{P}\p{S}]/gu, '')
     .toLowerCase();
 }
@@ -55,7 +55,11 @@ export function similarity(a, b) {
   let inter = 0;
   for (const [g, n] of A) inter += Math.min(n, B.get(g) || 0);
   const total = Math.max(1, a.length - 1 + b.length - 1);
-  return (2 * inter) / total;
+  const dice = (2 * inter) / total;
+  // 名稱完整包含另一個（如「設備汰換補助」⊂「商業服務業節能設備汰換補助」），且夠長才算
+  const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+  if (s.length >= 6 && l.includes(s)) return Math.max(dice, 0.85);
+  return dice;
 }
 
 export function dedupeKey({ agency, year, title, program_name }) {

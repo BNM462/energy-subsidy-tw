@@ -27,7 +27,8 @@ const AMOUNT_RE = /(?:新臺幣|新台幣|NT\$?)?\s*\d[\d,]*(?:\.\d+)?\s*(?:億|
  * 回傳 { text, details[] }；多種級距時以「最高新臺幣 X（依申請類型不同）」呈現，並保留原文細節。
  */
 export function extractAmount(text) {
-  const t = normalizeText(text);
+  // 「案例試算」等範例段落之後的金額都是示範計算，不列入
+  const t = normalizeText(text).split(/\n\s*(?:案例試算|試算範例|計算範例|範例說明|試算說明)/)[0];
   const sentences = t.split(/[。；;\n]/);
   const found = [];
   for (const s of sentences) {
@@ -40,14 +41,16 @@ export function extractAmount(text) {
       // 金額前面緊鄰的是總經費、罰鍰等，就不是補助金額
       const clause = before.split(/[，,、；;]/).pop();
       if (/(總經費|總預算|預算總額|經費總額|罰鍰|保證金|手續費|規費|營業額|資本額|實收資本|年營收)/.test(clause)) continue;
+      // 試算範例中的金額（購入價、乘上、等於…）不是補助上限
+      if (/(購入價|購買價|售價|乘上|乘以|等於|案例|試算|例如|僅能獲得|預計申請)/.test(s.slice(Math.max(0, m.index - 24), m.index + m[0].length + 2))) continue;
       const value = parseAmount(m[0]);
       if (!value || value < 100) continue;
       // 原文片段：從前一個逗號之後到金額結束
-      const lead = before.split(/[，,、：:（(]/).pop();
+      const lead = before.split(/[，,：:]/).pop();
       const after = s.slice(m.index + m[0].length, m.index + m[0].length + 6);
       const capAfter = /^\s*(為上限|為限|上限)/.exec(after);
       const snippet = (lead + m[0] + (capAfter ? capAfter[0] : '')).replace(/^[\s\d.()（）一二三四五六七八九十、]+/, '').trim();
-      found.push({ value, snippet: snippet || m[0].trim(), cap: !!capAfter });
+      found.push({ value, snippet: snippet || m[0].trim(), cap: !!capAfter, ctx: before + m[0] });
     }
   }
   if (!found.length) return { text: null, details: [] };
@@ -55,8 +58,12 @@ export function extractAmount(text) {
   const details = [...new Set(found.map((f) => f.snippet))].slice(0, 8);
   const max = distinct[0];
   const hasCap = max.cap || /(最高|上限|至多|為限)/.test(max.snippet);
+  const perUnit = (f) => /每\s*(台|臺|具|瓩|kW|KW|戶|件|組|盞|座|套)/.test(f.ctx || f.snippet);
   let out;
-  if (distinct.length === 1) {
+  if (distinct.length > 1 && found.every(perUnit)) {
+    // 依設備別定額補助：不挑單一數字，避免誤導
+    out = `依設備項目定額補助（共 ${distinct.length} 種上限，詳見詳細資訊）`;
+  } else if (distinct.length === 1) {
     out = hasCap ? `最高${formatNtd(max.value)}` : max.snippet;
   } else {
     out = `最高${formatNtd(max.value)}（依申請類型不同）`;
@@ -64,7 +71,7 @@ export function extractAmount(text) {
   return { text: out, details };
 }
 
-const TARGET_LABEL = /(補助對象|申請對象|申請資格|適用對象|獎勵對象|補助範圍及對象|申請人資格|受補助對象|申請者資格|適用範圍)\s*[:：]?\s*/g;
+const TARGET_LABEL = /(補助對象|申請對象|申請資格|適用對象|獎勵對象|補助範圍及對象|申請人資格|受補助對象|申請者資格|適用範圍)(?:\s*[:：]|\s*\n|為)\s*/g;
 
 /** 擷取補助對象原文（取第一個有實際內容的「補助對象：…」） */
 export function extractTarget(text) {
@@ -127,11 +134,19 @@ function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** 受託執行單位（官方原文「委託財團法人XX辦理」） */
+export function extractDelegate(text) {
+  const m = /委託\s*((?:財團法人|社團法人)[^\s，,。、；;（(]{2,24}?)\s*(?:辦理|執行|承辦)/.exec(normalizeText(text || ''));
+  return m ? m[1] : null;
+}
+
 /** 公告中的計畫識別資訊：發文字號、引號中的計畫名稱 */
 export function extractIdentifiers(title, text) {
   const t = normalizeText(text || '');
   const doc = /發文字號\s*[:：]?\s*([^\n\s]{4,30}號)/.exec(t);
-  const quoted = /[「『]([^」』]{4,60})[」』]/.exec(normalizeText(title)) || null;
+  // 計畫名稱：標題中的「」，沒有就取主旨中的「」
+  const subject = /主\s*旨\s*[:：][^\n]*/.exec(t);
+  const quoted = /[「『]([^」』]{4,60})[」』]/.exec(normalizeText(title)) || (subject && /[「『]([^」』]{4,60})[」』]/.exec(subject[0])) || null;
   return { docNo: doc ? doc[1] : null, programName: quoted ? quoted[1] : null };
 }
 
@@ -165,5 +180,6 @@ export function extractFields({ title, text, listDate = null, attachmentText = '
     summary: extractSummary(body, title),
     doc_no: ids.docNo,
     program_name: ids.programName,
+    delegate: extractDelegate(body),
   };
 }

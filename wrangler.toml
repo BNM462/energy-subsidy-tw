@@ -6,8 +6,8 @@ compatibility_date = "2026-09-01"
 
 [vars]
 # Gemini 模型（Google AI Studio 免費方案可用的穩定版；下架時改這裡或改備援模型）
-GEMINI_MODEL = "gemini-3.5-flash-lite"
-GEMINI_FALLBACK_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite"
 # 智慧小幫手：每人每日次數、全站每日上限（保護免費額度）
 ASK_DAILY_LIMIT = "5"
 ASK_GLOBAL_DAILY_LIMIT = "500"

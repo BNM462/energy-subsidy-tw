@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fetchPage, fetchResource, mapLimit } from './lib/fetcher.mjs';
 import { discoverListPages, SUBSIDY_ZONE_TEXT, sameAgency } from './lib/discover.mjs';
-import { extractListLinks, extractMain, findNextPage } from './lib/html.mjs';
+import { extractListLinks, extractMain, findNextPage, extractRowDocs } from './lib/html.mjs';
 import { classify, titleWorthFetching } from './lib/classify.mjs';
 import { extractFields } from './lib/extract.mjs';
 import { documentText, filenameFromDisposition } from './lib/docs.mjs';
@@ -16,7 +16,7 @@ import { normalizeText, toAdYear } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '3';
+const EXTRACTOR_VERSION = '4';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;
@@ -29,6 +29,8 @@ const TIME_BUDGET_MS = 17 * 60e3;
 
 const args = new Set(process.argv.slice(2));
 const DRY = args.has('--dry-run');
+// --only=id1,id2：只掃描指定來源（測試用）
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 const FORCE_DISCOVERY = args.has('--rediscover') || process.env.FORCE_DISCOVERY === '1';
 const API_BASE = (process.env.API_BASE || '').replace(/\/$/, '');
 const TOKEN = process.env.INGEST_TOKEN || '';
@@ -100,7 +102,8 @@ async function attachmentsText(attachments) {
   return text;
 }
 
-async function loadDetail(url) {
+async function loadDetail(url, row) {
+  if (row) return { url, main: { text: row.text, heading: row.title, pageTitle: '', attachments: [] } };
   if (isFileUrl(url)) {
     const r = await fetchResource(url, { binary: true });
     const text = await documentText(r.bytes, { contentType: r.contentType, name: filenameFromDisposition(r.disposition) || url });
@@ -115,7 +118,8 @@ async function main() {
   const state = await loadState();
   const now = Date.now();
   const year = taipeiYear(now);
-  const minDate = `${year - 1}-12-01`;
+  // 含去年全年：去年公告、今年仍受理的補助也要收錄
+  const minDate = `${year - 1}-01-01`;
   const errors = [];
 
   const urlState = new Map(state.crawl_urls.map((u) => [u.url, u]));
@@ -125,14 +129,15 @@ async function main() {
   // 1) 來源探索 + 列表掃描
   const candidates = new Map(); // url -> { url, title, date, source }
   const sourceResults = [];
-  await mapLimit(sources.filter((s) => s.enabled !== false), 6, async (src) => {
+  await mapLimit(sources.filter((s) => s.enabled !== false && (!ONLY.length || ONLY.includes(s.id))), 6, async (src) => {
     const prev = sourceState.get(src.id);
     const res = { source_id: src.id, agency: src.agency, checked_at: nowIso(), ok: false, error: null, consecutive_failures: 0 };
     let lists = [...(src.lists || [])];
     let anyOk = false;
     const errs = [];
     // 每日重新探索列表頁
-    const needDiscovery = FORCE_DISCOVERY || !prev?.discovered_at || now - Date.parse(prev.discovered_at) > DISCOVERY_MS || !(prev.discovered_lists || []).length;
+    // skip_discovery：只看設定好的列表（例如受託執行單位網站，不從首頁自動擴充）
+    const needDiscovery = !src.skip_discovery && (FORCE_DISCOVERY || !prev?.discovered_at || now - Date.parse(prev.discovered_at) > DISCOVERY_MS || !(prev.discovered_lists || []).length);
     if (needDiscovery) {
       try {
         const home = await fetchPage(src.homepage);
@@ -182,6 +187,21 @@ async function main() {
         errs.push(`${listUrl.slice(0, 80)}：${e.message}`);
       }
     }
+    // 表格列模式：每一列視為一則公告（該列沒有獨立網頁）
+    for (const listUrl of src.row_lists || []) {
+      try {
+        const page = await fetchPage(listUrl);
+        anyOk = true;
+        for (const r of extractRowDocs(page.text, page.url)) {
+          if (excludedTargets.has(r.url)) continue;
+          if (!titleWorthFetching(r.title)) continue;
+          if (r.date < minDate) continue;
+          if (!candidates.has(r.url)) candidates.set(r.url, { url: r.url, title: r.title, date: r.date, source: src, row: r });
+        }
+      } catch (e) {
+        errs.push(`${listUrl.slice(0, 80)}：${e.message}`);
+      }
+    }
     res.ok = anyOk;
     res.error = errs.length ? errs.slice(0, 3).join('；').slice(0, 300) : null;
     res.consecutive_failures = anyOk ? 0 : (prev?.consecutive_failures || 0) + 1;
@@ -193,6 +213,7 @@ async function main() {
   // 已知補助的官方網址也定期複查（狀態變更、網址失效）
   for (const s of subsidies.values()) {
     if (s.year < year - 1 || !s.official_url || candidates.has(s.official_url)) continue;
+    if (s.official_url.includes('#row-')) continue; // 表格列資料由列表頁本身更新
     const src = sources.find((x) => x.agency === s.agency) || { id: 'known', agency: s.agency, homepage: s.official_url };
     candidates.set(s.official_url, { url: s.official_url, title: s.title, date: s.announce_date, source: src, known: true });
   }
@@ -206,6 +227,7 @@ async function main() {
     if (!st) priority = 0;
     else if (st.verdict === 'error' && age > RETRY_ERROR_MS && st.fail_count < 12) priority = 1;
     else if (st.verdict === 'subsidy' && (FORCE_DISCOVERY || age > RECHECK_SUBSIDY_MS)) priority = 2;
+    else if (c.row && st.content_hash !== sha1(EXTRACTOR_VERSION + c.row.text)) priority = 2;
     if (priority != null) todo.push({ ...c, priority });
   }
   todo.sort((a, b) => a.priority - b.priority || (b.date || '').localeCompare(a.date || ''));
@@ -230,7 +252,7 @@ async function main() {
     urlUpdates.push(rec);
     let detail;
     try {
-      detail = await loadDetail(c.url);
+      detail = await loadDetail(c.url, c.row);
     } catch (e) {
       rec.fail_count += 1;
       rec.reason = e.message.slice(0, 200);
@@ -275,6 +297,7 @@ async function main() {
         agency: c.source.agency,
         year: docYear,
         ...f,
+        delegate: c.source.delegate || f.delegate,
         official_url: c.url,
         source_urls: [c.url],
         attachments: main.attachments.slice(0, 10),
@@ -295,7 +318,8 @@ async function main() {
   let dataChanged = false;
 
   // 有公告年度的先處理；沒有日期的計畫介紹頁（如「補助作業」說明頁）再併入對應的公告
-  docs.sort((a, b) => (a.doc.year == null) - (b.doc.year == null));
+  // 同一計畫有多個年度時，由最新年度的公告接手原本的計畫介紹頁
+  docs.sort((a, b) => (a.doc.year == null) - (b.doc.year == null) || (b.doc.year || 0) - (a.doc.year || 0));
   for (const { rec, doc } of docs) {
     const existingList = [...subsidies.values()];
     const match = findMatch(doc, existingList);
@@ -309,12 +333,13 @@ async function main() {
         first_seen_at: match.first_seen_at,
         target: doc.target ?? match.target,
         amount_text: doc.amount_text ?? match.amount_text,
+        amount_details: doc.amount_text ? doc.amount_details : match.amount_details,
         source_urls: [...new Set([doc.official_url, match.official_url, ...(match.source_urls || [])])].slice(0, 20),
       };
     } else if (match) {
       const sameOfficial = match.official_url === doc.official_url;
       merged = { ...match };
-      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'target', 'amount_text', 'summary', 'program_name', 'doc_no']) {
+      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'target', 'amount_text', 'summary', 'program_name', 'doc_no', 'delegate']) {
         // 官方原頁更新 → 以新內容為準；其他來源 → 只補空欄位
         if (doc[k] != null && (sameOfficial || merged[k] == null)) merged[k] = doc[k];
       }
@@ -330,6 +355,8 @@ async function main() {
         merged.target_types = [...new Set([...(merged.target_types || []), ...doc.target_types])];
         if (!merged.content) merged.content = doc.content;
       }
+      // 金額由其他來源補上時，一併帶入金額細節
+      if (!sameOfficial && merged.amount_text === doc.amount_text && !(merged.amount_details || []).length) merged.amount_details = doc.amount_details;
       merged.until_quota = !!(merged.until_quota || doc.until_quota);
       // 官方宣告額滿／用罄／提前截止：一旦出現就採用
       if (doc.status_flag) merged.status_flag = doc.status_flag;

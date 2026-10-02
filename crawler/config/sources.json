@@ -232,6 +232,28 @@
       "id": "mofa",
       "agency": "外交部",
       "homepage": "https://www.mofa.gov.tw/"
+    },
+    {
+      "id": "moeaea-esco",
+      "agency": "經濟部能源署",
+      "homepage": "https://ea01.moeaea.gov.tw/e0409/Page/PerformanceForm.aspx",
+      "row_lists": [
+        "https://ea01.moeaea.gov.tw/e0409/Page/ProjectExecution.aspx"
+      ],
+      "skip_discovery": true,
+      "note": "能源署「能源技術服務業資訊網」節能績效保證示範推廣補助專區；公告以表格列呈現（無個別網頁），採表格列模式讀取"
+    },
+    {
+      "id": "essc",
+      "agency": "經濟部商業發展署",
+      "delegate": "財團法人中衛發展中心",
+      "homepage": "https://www.essc.org.tw/subsidy/index/index.aspx",
+      "lists": [
+        "https://www.essc.org.tw/subsidy/news/news.aspx",
+        "https://www.essc.org.tw/subsidy/index/index.aspx"
+      ],
+      "skip_discovery": true,
+      "note": "經濟部商業服務業節能設備補助網站（商業發展署委託中衛發展中心執行；轉載經濟部正式公告含發文字號）。商發署官網 aoc.gov.tw 啟用 Cloudflare 真人驗證，無法自動讀取"
     }
   ]
 }

@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyOverrides } from '../server/data.js';
+import { applyOverrides, carriedOver } from '../server/data.js';
+
+test('去年公告、今年仍受理：顯示；去年已結束：不顯示', () => {
+  // 住宅家電汰舊換新：114/12/31 公告，受理至 116/01/31
+  assert.ok(carriedOver({ year: 2025, apply_end: '2027-01-31' }, 2026));
+  assert.ok(!carriedOver({ year: 2025, apply_end: '2025-11-30' }, 2026));
+  assert.ok(carriedOver({ year: 2025, until_quota: true }, 2026), '額滿為止且未宣告結束');
+  assert.ok(!carriedOver({ year: 2025, until_quota: true, status_flag: 'budget_exhausted' }, 2026));
+  assert.ok(!carriedOver({ year: 2025 }, 2026), '沒有期程資訊不推測');
+  assert.ok(!carriedOver({ year: 2024, apply_end: '2027-01-01' }, 2026), '只往前看一年');
+});
 
 const base = { id: 'abc123def456', title: '錯誤標題', official_url: 'https://x.gov.tw/1', apply_end: '2026-10-01', year: 2026 };
 
