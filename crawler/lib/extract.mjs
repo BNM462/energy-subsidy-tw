@@ -198,7 +198,8 @@ export function extractDelegate(text) {
 /** 公告中的計畫識別資訊：發文字號、引號中的計畫名稱 */
 export function extractIdentifiers(title, text) {
   const t = normalizeText(text || '');
-  const doc = /發文字號\s*[:：]?\s*([^\n\s]{4,30}號)/.exec(t);
+  // 發文字號：有「發文字號：」標籤，或公文中單獨出現的「經授能字第11404024050號」
+  const doc = /發文字號\s*[:：]?\s*([^\n\s]{4,30}號)/.exec(t) || /(?<![一-鿿])([一-鿿]{1,5}字第\d{8,13}號)/.exec(t);
   // 計畫名稱：標題中的「」，沒有就取主旨中的「」
   const subject = /主\s*旨\s*[:：][^\n]*/.exec(t);
   const quoted = /[「『]([^」』]{4,60})[」』]/.exec(normalizeText(title)) || (subject && /[「『]([^」』]{4,60})[」』]/.exec(subject[0])) || null;
@@ -227,7 +228,9 @@ export function extractFields({ title, text, listDate = null, attachmentText = '
     apply_end_time: period.endTime,
     deadline_text: period.rawText,
     until_quota: period.untilQuota || /額滿為止|用罄為止/.test(all),
-    status_flag: detectStatusFlag(body),
+    period_varies: !!period.varies,
+    // 法規本文（要點、辦法…）只是規定「用罄時得提前截止」，不代表已經發生
+    status_flag: /(要點|辦法|規定|須知|準則|條例|規範)$/.test(normalizeText(title || '').trim()) ? null : detectStatusFlag(body),
     amount_text: amountAll.text,
     amount_details: amountAll.details,
     target,

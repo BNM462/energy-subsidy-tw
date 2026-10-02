@@ -81,7 +81,7 @@ const PERIOD_LABEL =
 
 const UNTIL_QUOTA = /額滿為止|額滿即止|額滿截止|用罄為止|經費用(罄|完)為止|預算用(罄|完)為止|額滿即停止|用罄即停止/;
 const FLAG_PATTERNS = [
-  ['budget_exhausted', /(經費|預算|補助款)(已)?(用罄|用完|告罄|使用完畢)(?!為止|即)/],
+  ['budget_exhausted', /(經費|預算|補助款)(已)?(全數|全部)?(用罄|用完|告罄|使用完畢)(?!為止|即)/],
   ['quota_full', /(已|業已|目前已)額滿|申請額度已滿|名額已滿/],
   ['closed_early', /提前(截止|結束|停止)(受理|收件|申請)?/],
   ['closed', /(已|即日起)停止(受理|收件)/],
@@ -90,15 +90,24 @@ const FLAG_PATTERNS = [
 // 假設語氣（例：「如經費即將用罄，本署得公告提前截止」）不是實際狀態
 const CONDITIONAL_BEFORE = /(得|如|若|倘|將|即將|可能|預計|視|恐|或|應|必要時)[^，。；\n]{0,12}$/;
 
-/** 官方明示的結束狀態 */
+// 同一句中出現這些字，代表是規定或假設（「如經費即將用罄，得公告提前截止」），不是已經發生
+const CONDITIONAL_IN_SENTENCE = /(如|若|倘|得|即將|可能|預計|視|必要時|屆時|將視)/;
+// 緊接在後面的字代表假設或原則（「經費用罄時」「至經費用罄為原則」）
+const CONDITIONAL_AFTER = /^(時|者|為止|為原則|為限|前|後|即|則)/;
+
+/** 官方明示的結束狀態（只採用已經發生的敘述） */
 export function detectStatusFlag(text) {
   const t = normalizeText(text);
   for (const [flag, re] of FLAG_PATTERNS) {
     const g = new RegExp(re.source, 'g');
     let m;
     while ((m = g.exec(t))) {
-      const before = t.slice(Math.max(0, m.index - 14), m.index);
-      if (!CONDITIONAL_BEFORE.test(before)) return flag;
+      const sentenceBefore = t.slice(Math.max(0, m.index - 80), m.index).split(/[。；;\n]/).pop();
+      const after = t.slice(m.index + m[0].length, m.index + m[0].length + 4);
+      const actual = /已/.test(sentenceBefore + m[0]);
+      if (CONDITIONAL_AFTER.test(after)) continue;
+      if (!actual && (CONDITIONAL_BEFORE.test(t.slice(Math.max(0, m.index - 14), m.index)) || CONDITIONAL_IN_SENTENCE.test(sentenceBefore))) continue;
+      return flag;
     }
   }
   return null;
@@ -126,31 +135,82 @@ function parseTime(s) {
  * 回傳 { start, end, endTime, rawText, untilQuota, fromToday }，抓不到的欄位為 null。
  * announceDate 只用於官方明寫「即日起」時作為開始日。
  */
+// 「即日起」「公告日起」「自公告之日起」都代表從公告日開始
+const FROM_TODAY = /即日起|(自)?公告(之)?日起/;
+// 不是「申請」期間的期間（執行、輔導、委託、結案、購買…），不可當成受理申請期間
+const NON_APPLY = /(執行期程|執行期間|輔導期程|計畫期程|計畫期間|委託期間|結案|完工|有效期間|購買期間|購置期間|回收證明|訓練期間|活動期間|履約|保固|竣工|專案期程)/;
+
 export function extractPeriod(text, { announceDate = null } = {}) {
   const t = normalizeText(text);
-  const result = { start: null, end: null, endTime: null, rawText: null, untilQuota: false, fromToday: false };
+  const result = { start: null, end: null, endTime: null, rawText: null, untilQuota: false, fromToday: false, varies: false };
   const candidates = [];
   PERIOD_LABEL.lastIndex = 0;
   let m;
   while ((m = PERIOD_LABEL.exec(t))) {
     const labelEnd = m.index + m[0].length;
     // 只採用「標籤：內容」形式（標題中的「受理申請期間、受理申請處所」不算）
-    if (!/^\s*([:：]|自|即日起|為|於|至|起|\d)/.test(t.slice(labelEnd, labelEnd + 4))) continue;
+    if (!/^\s*([:：]|自|即日起|公告|為|於|至|起|\d)/.test(t.slice(labelEnd, labelEnd + 4))) continue;
     const lineEnd = t.indexOf('\n', labelEnd);
     let seg = t.slice(m.index, lineEnd === -1 ? m.index + 200 : lineEnd);
-    // 標籤後同一行沒有日期時，接續下一行（例：「申請期間：\n115年…」）
-    if (!/\d|即日起/.test(seg.slice(m[0].length))) seg = t.slice(m.index, m.index + 200).split('\n').slice(0, 2).join(' ');
-    candidates.push(seg.slice(0, 220));
+    if (!/\d|即日起|公告日/.test(seg.slice(m[0].length))) {
+      // 標籤後同一行沒有日期：可能是分類別的多個期間（例：(一)第一類…至10/15；(二)第三類…至11/30）
+      const subs = t.slice(labelEnd).split('\n').slice(1, 6);
+      const items = [];
+      for (const line of subs) {
+        if (!/^\s*([（(][一二三四五六七八九十\d]+[)）]|\d+[.、]|第[一二三四五]類)/.test(line) || !/\d/.test(line)) break;
+        items.push(line.trim());
+      }
+      if (items.length >= 2) {
+        candidates.push({ multi: items });
+        continue;
+      }
+      seg = t.slice(m.index, m.index + 200).split('\n').slice(0, 2).join(' ');
+    }
+    candidates.push({ seg: seg.slice(0, 220) });
   }
-  // 沒有標籤時，找「自…起至…止」「即日起至…」句型
+  // 沒有標籤時，找「自…起至…止」「即日起至…」句型（排除執行、委託、結案等非申請期間）
   // 例：「於115/8/17~115/9/16受理申請」
   const generic = /(自|即日起|於)[^。\n]{0,40}?(至|到|~|～|－|迄)[^。\n]{0,40}?(止|為止|截止|受理|收件)/g;
-  while ((m = generic.exec(t))) candidates.push(t.slice(m.index, m.index + m[0].length + 20));
+  while ((m = generic.exec(t))) {
+    const before = t.slice(Math.max(0, m.index - 30), m.index);
+    const body = m[0];
+    // 期間標籤可能在上一行（例：「執行期程\n自輔導計畫通過申請日起至…」），因此只以句號切分
+    if (NON_APPLY.test(before.split(/。/).pop() + body)) continue;
+    candidates.push({ seg: t.slice(m.index, m.index + m[0].length + 20) });
+  }
 
-  for (const seg of candidates) {
-    const sentence = seg.split(/[。；;]/)[0];
+  for (const c of candidates) {
+    if (c.multi) {
+      const parts = c.multi.map((line) => parseSentence(line, announceDate)).filter(Boolean);
+      if (parts.length < 2) continue;
+      const ends = parts.map((p) => p.end).filter(Boolean).sort();
+      const starts = parts.map((p) => p.start).filter(Boolean).sort();
+      result.start = starts[0] || null;
+      result.end = ends[ends.length - 1] || null;
+      const last = parts.find((p) => p.end === result.end);
+      result.endTime = last?.endTime || null;
+      result.fromToday = parts.some((p) => p.fromToday);
+      result.varies = new Set(ends).size > 1;
+      result.rawText = c.multi.map((l) => l.replace(/^\s*[（(][一二三四五六七八九十\d]+[)）]\s*/, '').replace(/[。；;]+$/, '')).join('；').slice(0, 220);
+      break;
+    }
+    const sentence = c.seg.split(/[。；;]/)[0];
+    const p = parseSentence(sentence, announceDate);
+    if (!p) continue;
+    Object.assign(result, p);
+    result.rawText = sentence.replace(/\s+/g, ' ').trim().slice(0, 140);
+    break;
+  }
+  result.untilQuota = detectUntilQuota(t);
+  return result;
+}
+
+/** 解析單一句子中的申請期間；無法判斷時回傳 null */
+function parseSentence(sentence, announceDate) {
+  const result = { start: null, end: null, endTime: null, fromToday: false };
+  {
     const dates = findDates(sentence);
-    const fromToday = /即日起/.test(sentence);
+    const fromToday = FROM_TODAY.test(sentence);
     // 只有月日的結束日：以同句已知年份補上（僅同句內有年份時）
     if (dates.length === 1 && !fromToday) {
       const rest = sentence.slice(dates[0].end);
@@ -162,7 +222,7 @@ export function extractPeriod(text, { announceDate = null } = {}) {
         if (e && e >= dates[0].iso) dates.push({ iso: e, index: dates[0].end + md.index, end: dates[0].end + md.index + md[0].length, raw: md[0] });
       }
     }
-    if (!dates.length && !fromToday) continue;
+    if (!dates.length && !fromToday) return null;
 
     const isDeadlineOnly = /截止|期限|前(送達|提出|寄達|申請)|為止|止$/.test(sentence) && dates.length === 1 && !/(至|到|~|迄)/.test(sentence.slice(0, dates[0].index));
     // 起訖必須是以「至／~／到／迄」相連的兩個日期（避免把發布日期當成開始日）
@@ -176,7 +236,7 @@ export function extractPeriod(text, { announceDate = null } = {}) {
       result.end = pair[1].iso;
       result.endTime = parseTime(sentence.slice(pair[1].end, pair[1].end + 15));
     } else if (dates.length >= 2 && !fromToday) {
-      continue;
+      return null;
     } else if (fromToday && dates.length >= 1) {
       result.fromToday = true;
       result.start = announceDate;
@@ -191,15 +251,12 @@ export function extractPeriod(text, { announceDate = null } = {}) {
       result.fromToday = true;
       result.start = announceDate;
     } else {
-      continue;
+      return null;
     }
     if (result.start && result.end && result.start > result.end) {
       result.start = null; // 日期順序不合理時不採用開始日
     }
-    result.rawText = sentence.replace(/\s+/g, ' ').trim().slice(0, 140);
-    break;
   }
-  result.untilQuota = detectUntilQuota(t);
   return result;
 }
 
@@ -211,6 +268,13 @@ export function extractAnnounceDate(text) {
   while ((x = m.exec(t))) {
     const d = findDates(t.slice(x.index, x.index + 40))[0];
     if (d) return d.iso;
+  }
+  // 公文格式：「經濟部能源署 公告」下一行單獨一行的日期（例：中華民國115年2月6日）
+  const head = t.split('\n').slice(0, 8);
+  for (let i = 0; i < head.length; i++) {
+    if (!/公告\s*$/.test(head[i])) continue;
+    const next = (head[i + 1] || '').trim();
+    if (/^(中華民國)?\s*\d{2,4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日$/.test(next)) return findDates(next)[0]?.iso ?? null;
   }
   return null;
 }

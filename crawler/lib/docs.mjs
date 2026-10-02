@@ -47,7 +47,15 @@ export async function documentText(bytes, { contentType = '', name = '' } = {}) 
     if (kind === 'odt' || kind === 'docx' || kind === 'zip') {
       const files = unzipSync(bytes, { filter: (f) => f.name === 'content.xml' || f.name === 'word/document.xml' });
       const xml = files['content.xml'] || files['word/document.xml'];
-      return xml ? xmlToText(strFromU8(xml)).slice(0, 60000) : '';
+      if (xml) return xmlToText(strFromU8(xml)).slice(0, 60000);
+      if (kind !== 'zip') return '';
+      // 一般壓縮檔（例：申請須知及報名表.zip）：讀取裡面的 PDF／Word／ODT
+      const inner = unzipSync(bytes, { filter: (f) => /\.(pdf|docx|odt)$/i.test(f.name) && f.originalSize < 15 * 1024 * 1024 });
+      const parts = [];
+      for (const [name, data] of Object.entries(inner).slice(0, 5)) {
+        parts.push(await documentText(data, { name }));
+      }
+      return parts.join('\n').slice(0, 60000);
     }
   } catch {
     return '';

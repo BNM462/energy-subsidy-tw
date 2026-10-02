@@ -30,6 +30,7 @@ if (crawlFailed) {
 
 const problems = [];
 if (crawlFailed && previousFailed) problems.push(`- 爬蟲連續執行失敗：${report.fatal || '請查看執行紀錄'}`);
+for (const w of report.program_warnings || []) problems.push(`- ${w}`);
 for (const s of report.failing_sources || []) {
   problems.push(`- ${s.agency}：連續 ${s.consecutive_failures} 次（約 ${Math.round(s.consecutive_failures / 2)} 小時）無法讀取。${s.error || ''}`);
 }

@@ -1,15 +1,13 @@
 {
-  "_說明": "重點補助監測清單：沒有一般公告列表、或需要固定追蹤的重要節能補助。爬蟲每 6 小時讀取 pages[0]（及 docs 官方附件）自動更新期程與狀態（例如官方宣告經費用罄）。fields 為依官方原文整理的固定顯示文字（不使用 AI 即時生成），官方內容變更時請請 AI 協助更新。ongoing=true 表示常態／多年期辦理，即使不是今年公告，在受理期間內也會顯示。",
+  "_說明": "重點補助監測清單：沒有一般公告列表、需要固定追蹤的重要節能補助。爬蟲每 6 小時讀取 pages 中的頁面，並自動從頁面上依名稱（須知、懶人包、公告、要點、說明、Q&A、報名…）找出最新的官方附件（PDF／Word／ODT／ZIP）讀取，期程、截止、經費用罄等狀態全部自動判斷；附件換新版本也會自動讀到新版。fields 只放依官方原文整理的說明文字（不含日期），不使用 AI 即時生成。ongoing=true 表示常態／多年期辦理。若監測頁面顯示的年度已過時，系統會開問題單提醒更新網址。",
   "programs": [
     {
       "id": "tax-energy-appliance",
       "agency": "財政部",
       "title": "購買節能電器退還減徵貨物稅",
       "pages": [
-        "https://www.etax.nat.gov.tw/etwmain/tax-info/purchase-energy-saving-appliance-reduced-commodity-tax-refund-area"
-      ],
-      "docs": [
-        "https://www.etax.nat.gov.tw/etwmain/attachments/ZYj5VMq"
+        "https://www.etax.nat.gov.tw/etwmain/tax-info/purchase-energy-saving-appliance-reduced-commodity-tax-refund-area",
+        "https://www.etax.nat.gov.tw/etwmain/tax-info/purchase-energy-saving-appliance-reduced-commodity-tax-refund-area/faq"
       ],
       "ongoing": true,
       "fields": {
@@ -21,10 +19,7 @@
           "除濕機：500／900／1,200 元（依額定除濕能力級距）"
         ],
         "target": "購買符合規定新電冰箱、冷（暖）氣機或除濕機（非供銷售且無退換貨）之買受人",
-        "target_types": [
-          "民眾"
-        ],
-        "deadline_text": "適用購買期間 108/6/15～118/12/31；應於發票或收據交易日期之次日起 6 個月內申請"
+        "target_types": ["民眾"]
       }
     },
     {
@@ -32,31 +27,22 @@
       "agency": "經濟部能源署",
       "delegate": "財團法人台灣綠色生產力基金會",
       "title": "ISO 50001 能源管理系統與碳盤查示範輔導",
-      "pages": [
-        "https://www.tgpf.org.tw/event/even-115011901.htm"
-      ],
+      "pages": ["https://www.tgpf.org.tw/event/even-115011901.htm"],
       "fields": {
         "summary": "協助服務業用戶建置 ISO 50001 能源管理系統並完成碳盤查，可委託執行單位或自選合格輔導單位進行輔導。",
         "target": "服務業部門依法設立登記滿 2 年且持續營運、未曾取得 ISO 50001 驗證之用戶（一般用戶：契約容量 500kW 以上；企業集團用戶：2 處以上營業據點）",
-        "target_types": [
-          "服務業"
-        ],
-        "apply_start": null,
-        "apply_end": null,
-        "deadline_text": "執行期程：自輔導計畫通過申請日起至115年12月31日止（申請截止日請見官方公告）"
+        "target_types": ["服務業"]
       }
     },
     {
-      "id": "motor-utility-equipment",
-      "agency": "經濟部能源署",
-      "title": "動力與公用設備補助",
-      "pages": [
-        "https://www.moeaea.gov.tw/ECW/populace/content/Content.aspx?menu_id=8784",
-        "https://www.mdss.org.tw/subsidy/index/index.aspx"
-      ],
+      "id": "moeai-plus",
+      "agency": "經濟部產業發展署",
+      "title": "產業競爭力輔導團（AI 診斷輔導＋研發與設備汰換補助）",
+      "pages": ["https://eii.nat.gov.tw/moeai-plus/"],
       "ongoing": true,
       "fields": {
-        "summary": "購置登錄能源效率之高效率空氣壓縮機、風機、泵及低壓三相感應電動機等 4 項動力設備，可申請補助。"
+        "summary": "製造業經輔導團 AI 診斷後可申請 AI 工具導入補助；後續研發轉型階段提供研發與設備汰換補助，透過 AI 優化生產系統、提升效率。",
+        "target_types": ["工業"]
       }
     }
   ]

@@ -20,6 +20,7 @@ function parseRow(row) {
     }
   }
   out.until_quota = !!row.until_quota;
+  out.period_varies = !!row.period_varies;
   return out;
 }
 
@@ -41,7 +42,8 @@ export async function loadOverrides(db) {
 
 export function applyOverrides(sub, { overrides, excluded }) {
   if (excluded.has(sub.id) || excluded.has(sub.official_url)) return null;
-  const o = overrides.get(sub.id) || overrides.get(sub.official_url);
+  // 依編號、官方網址或任一來源網址對應（官方網址改為正式公告後，原本的設定仍適用）
+  const o = overrides.get(sub.id) || overrides.get(sub.official_url) || (sub.source_urls || []).map((u) => overrides.get(u)).find(Boolean);
   if (!o) return sub;
   const merged = { ...sub, manual: true };
   for (const k of OVERRIDABLE) if (k in o) merged[k] = o[k];
@@ -51,7 +53,7 @@ export function applyOverrides(sub, { overrides, excluded }) {
 
 const LIST_COLUMNS = `id, title, agency, announce_date, year, apply_start, apply_end, apply_end_time, deadline_text,
   until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status, delegate,
-  program_name, first_seen_at, updated_at, views, hidden`;
+  program_name, period_varies, source_urls, first_seen_at, updated_at, views, hidden`;
 
 /** 常態／多年期辦理的重點計畫：今年仍在期程內（或期程未明）就顯示 */
 export function ongoingVisible(s, year) {

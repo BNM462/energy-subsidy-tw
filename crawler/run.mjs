@@ -16,7 +16,7 @@ import { normalizeText, toAdYear } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '6';
+const EXTRACTOR_VERSION = '7';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;
@@ -101,6 +101,32 @@ async function attachmentsText(attachments) {
     }
   }
   return text;
+}
+
+// 重點監測計畫：從頁面上依名稱找出官方說明文件（附件換新版本時，網址改變也能自動找到）
+const DOC_HINT = /須知|要點|公告|簡章|懶人包|說明|Q&A|問答|辦法|作業規定|申請資料/i;
+const DOC_SKIP = /切結|範例|報名表|申請表|表格|選拔|成果|海報|簡報|議程|名單/;
+
+async function programDocsText(program, main) {
+  const attachments = [...main.attachments];
+  let pagesText = '';
+  for (const url of program.pages.slice(1)) {
+    try {
+      const p = await fetchPage(url);
+      const m = extractMain(p.text, p.url);
+      pagesText += `\n${m.text}`;
+      attachments.push(...m.attachments);
+    } catch {
+      /* 其他頁面讀取失敗不影響 */
+    }
+  }
+  const seen = new Set();
+  const docs = attachments.filter((a) => {
+    if (seen.has(a.url)) return false;
+    seen.add(a.url);
+    return DOC_HINT.test(a.label) && !DOC_SKIP.test(a.label);
+  });
+  return { pagesText, docText: await attachmentsText(docs.slice(0, 4)), docCount: docs.length };
 }
 
 async function loadDetail(url, row) {
@@ -248,6 +274,7 @@ async function main() {
   const deadUrls = new Set();
   const aliveUrls = new Set();
   const withdrawnUrls = new Set();
+  const programWarnings = [];
   await mapLimit(batch, 6, async (c) => {
     if (Date.now() - startedMs > TIME_BUDGET_MS) return;
     const st = urlState.get(c.url);
@@ -271,7 +298,14 @@ async function main() {
     rec.fail_count = 0;
     aliveUrls.add(c.url);
     const { main } = detail;
-    const hash = sha1(EXTRACTOR_VERSION + main.text);
+    // 重點監測計畫：一併讀取其他頁面與官方說明文件；文件改版也算內容變更
+    let programDocText = '';
+    if (c.program) {
+      const extra = await programDocsText(c.program, main);
+      main.text += extra.pagesText;
+      programDocText = extra.docText;
+    }
+    const hash = sha1(EXTRACTOR_VERSION + main.text + programDocText);
     if (st && st.content_hash === hash && st.verdict !== 'error') return; // 內容沒變
     rec.content_hash = hash;
 
@@ -280,8 +314,7 @@ async function main() {
     let cls = c.program
       ? { isSubsidy: true, reason: '重點補助監測清單', signals: energySignals(main.text) }
       : classify({ title, text: main.text });
-    let attText = '';
-    if (c.program?.docs?.length) attText = await attachmentsText(c.program.docs.map((url) => ({ url, label: url })));
+    let attText = programDocText;
     // 內文很短（詳見附件）時，讀附件再判斷一次
     if (!cls.isSubsidy && titleWorthFetching(title) && main.text.replace(/\s/g, '').length < 600 && main.attachments.length) {
       attText = await attachmentsText(main.attachments);
@@ -349,18 +382,26 @@ async function main() {
         source_urls: [...new Set([doc.official_url, match.official_url, ...(match.source_urls || [])])].slice(0, 20),
       };
     } else if (match) {
-      const sameOfficial = match.official_url === doc.official_url;
+      // 來源優先順序：政府機關正式公告頁 > 表格列／受託執行單位網站。找到正式公告時，改以正式公告為官方網址
+      const rank = (u) => (!u ? 0 : u.includes('#row-') || !isGovUrl(u) ? 1 : 2);
+      const upgrade = rank(doc.official_url) > rank(match.official_url) && doc.year != null && doc.year === match.year;
+      const sameOfficial = match.official_url === doc.official_url || upgrade;
       merged = { ...match };
-      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'target', 'amount_text', 'summary', 'program_name', 'doc_no', 'delegate']) {
+      if (upgrade) {
+        merged.source_urls = [...new Set([match.official_url, ...(match.source_urls || [])])];
+        merged.official_url = doc.official_url;
+      }
+      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'period_varies', 'target', 'amount_text', 'summary', 'program_name', 'doc_no', 'delegate']) {
         // 官方原頁更新 → 以新內容為準；其他來源 → 只補空欄位
         if (doc[k] != null && (sameOfficial || merged[k] == null)) merged[k] = doc[k];
       }
       if (sameOfficial) {
         merged.title = doc.title;
         merged.content = doc.content;
-        merged.attachments = doc.attachments;
-        merged.amount_details = doc.amount_details;
-        merged.target_types = doc.target_types;
+        merged.attachments = doc.attachments.length ? doc.attachments : merged.attachments;
+        // 正式公告常不寫金額、對象：沒有時保留其他官方來源已擷取的內容
+        if ((doc.amount_details || []).length) merged.amount_details = doc.amount_details;
+        if ((doc.target_types || []).length) merged.target_types = doc.target_types;
         merged.signals = doc.signals;
         merged.content_hash = doc.content_hash;
         // 補助重點：新擷取結果優先；沒有時保留仍合格的舊重點（可能來自計畫介紹頁）
@@ -373,7 +414,10 @@ async function main() {
       if (!sameOfficial && merged.amount_text === doc.amount_text && !(merged.amount_details || []).length) merged.amount_details = doc.amount_details;
       merged.until_quota = !!(merged.until_quota || doc.until_quota);
       // 官方宣告額滿／用罄／提前截止：一旦出現就採用
-      if (doc.status_flag) merged.status_flag = doc.status_flag;
+      // 只採用同一年度（同一回合）的結束公告，避免舊年度「經費用罄」影響新年度
+      // 官方原頁：以目前內容為準（官方撤下「提前截止」時也會恢復）；其他來源：只採用同年度的結束公告
+      if (sameOfficial) merged.status_flag = doc.status_flag || null;
+      else if (doc.status_flag && doc.year && doc.year === merged.year) merged.status_flag = doc.status_flag;
       merged.source_urls = [...new Set([...(merged.source_urls || []), doc.official_url])].slice(0, 20);
       if (merged.announce_date) merged.year = +merged.announce_date.slice(0, 4);
     } else {
@@ -419,6 +463,21 @@ async function main() {
     }
   }
 
+  // 重點監測計畫是否過時（每輪都依資料庫狀態檢查，避免通知時有時無）
+  {
+    const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+    const urlRecs = new Map([...state.crawl_urls, ...urlUpdates].map((u) => [u.url, u]));
+    for (const pg of programsCfg) {
+      const url = pg.pages[0];
+      const rec = urlRecs.get(url);
+      if (rec && rec.fail_count >= 3) programWarnings.push(`「${pg.title}」監測頁面連續 ${rec.fail_count} 次無法讀取，網址可能已變更：${url}`);
+      const sub = [...subsidies.values()].find((x) => x.official_url === url || (x.source_urls || []).includes(url));
+      if (!sub) continue;
+      if (!pg.ongoing && sub.year && sub.year < year) programWarnings.push(`「${pg.title}」監測頁面仍是 ${sub.year} 年的內容，今年可能已有新網址，請確認：${url}`);
+      if (sub.apply_end && sub.apply_end < today) programWarnings.push(`「${pg.title}」官方期程已於 ${sub.apply_end} 截止，請確認是否有新年度公告：${url}`);
+    }
+  }
+
   const finishedAt = nowIso();
   const stats = {
     sources: sourceResults.length,
@@ -452,7 +511,7 @@ async function main() {
   const failing = sourceResults.filter((s) => s.consecutive_failures >= 6);
   writeFileSync(
     new URL('last-run.json', OUT_DIR),
-    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), errors }, null, 2),
+    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), program_warnings: programWarnings, errors }, null, 2),
   );
 
   if (DRY) {

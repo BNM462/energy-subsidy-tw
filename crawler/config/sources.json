@@ -50,8 +50,10 @@
       "lists": [
         "https://www.moeaea.gov.tw/ECW/populace/news/Board.aspx?kind=3&menu_id=57",
         "https://www.moeaea.gov.tw/ECW/populace/news/News.aspx?kind=1&menu_id=41",
-        "https://www.moeaea.gov.tw/ECW/populace/content/ContentLink2.aspx?menu_id=8765&sub_menu_id=8783"
-      ]
+        "https://www.moeaea.gov.tw/ECW/populace/content/ContentLink2.aspx?menu_id=8765&sub_menu_id=8783",
+        "https://www.moeaea.gov.tw/ECW/populace/Law/LawsList.aspx?kind=7&menu_id=3303"
+      ],
+      "note": "能源署「能源法規 › 節約能源」列表含各補助年度正式公告（動力與公用設備、住宅家電汰舊換新、節能績效保證、廢熱回收、節能服務業獎勵等）"
     },
     {
       "id": "ida",

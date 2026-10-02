@@ -1,7 +1,7 @@
 // 以真實官方頁面片段建立的回歸測試
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPeriod } from '../crawler/lib/dates.mjs';
+import { extractPeriod, detectStatusFlag } from '../crawler/lib/dates.mjs';
 import { extractFields, extractDelegate, extractTarget } from '../crawler/lib/extract.mjs';
 import { extractRowDocs } from '../crawler/lib/html.mjs';
 import { normalizeName, similarity } from '../crawler/lib/dedupe.mjs';
@@ -55,6 +55,42 @@ test('商發署設備汰換懶人包：試算範例不是上限；依設備定�
   assert.ok(!/7\.37|73,?700/.test(f.amount_text));
   assert.equal(f.amount_text, '依設備項目定額補助（共 3 種上限，詳見詳細資訊）');
   assert.ok(similarity(normalizeName('設備汰換補助懶人包'), normalizeName('115年度設備汰換補助相關規定公告(已結束)', '商業服務業節能設備汰換補助')) >= 0.72);
+});
+
+test('冷卻行動：分類別不同截止日，自動取最晚截止並標示依類別不同', () => {
+  const text = '補助法令依據:依據「溫室氣體減量技術及氣候變遷調適補助辦法」辦理\n一、受理申請期間:\n(一)第一類及第二類申請單位即日起至115年10月15日。\n(二)第三類申請單位即日起至115年11月30日。\n二、補助項目:本計畫補助類型';
+  const p = extractPeriod(text, { announceDate: '2026-09-08' });
+  assert.equal(p.start, '2026-09-08');
+  assert.equal(p.end, '2026-11-30');
+  assert.ok(p.varies);
+  assert.match(p.rawText, /第一類及第二類申請單位即日起至115年10月15日；第三類申請單位即日起至115年11月30日/);
+});
+
+test('動力與公用設備：「公告日起至」與公文日期', () => {
+  const text = '115年度「動力與公用設備補助」委託辦理單位\n經濟部能源署 公告\n中華民國115年2月6日\n能節字第11504000910號\n二、 補助購買期間:自115年1月1日起至115年12月31日止。\n三、 受理申請期間:公告日起至116年1月15日止。補助購買期間屆滿前，如補助經費即將用罄，得於網站公告終止補助。';
+  const f = extractFields({ title: '115年度「動力與公用設備補助」委託辦理單位、補助購買期間、受理申請期間及相關申請事宜', text });
+  assert.equal(f.announce_date, '2026-02-06');
+  assert.equal(f.apply_start, '2026-02-06');
+  assert.equal(f.apply_end, '2027-01-15', '不可誤用「補助購買期間」');
+  assert.equal(f.status_flag, null, '「如補助經費即將用罄」是假設語氣');
+});
+
+test('經費用罄：只有「已經發生」才標示，規定與假設語氣不算', () => {
+  assert.equal(detectStatusFlag('補助購買期間屆滿前，如補助經費即將用罄，得於「動力與公用設備補助」網站(https://www.mdss.org.tw)公告終止補助及提前截止受理申請補助。'), null);
+  assert.equal(detectStatusFlag('預算經費用罄時，能源署得公告提前終止補助。'), null);
+  assert.equal(detectStatusFlag('依審查結果擇優給予補助至補助經費用罄為原則。'), null);
+  assert.equal(detectStatusFlag('因補助經費已全數用罄，「動力與公用設備補助申請系統」將於今日中午停止受理。'), 'budget_exhausted');
+  // 法規本文不設定結束狀態
+  assert.equal(extractFields({ title: '住宅家電汰舊換新節能補助作業要點', text: '補助經費用罄者，本部應公告提前截止受理。' }).status_flag, null);
+});
+
+test('執行期程在上一行：不是申請期間', () => {
+  assert.equal(extractPeriod('執行期程\n自輔導計畫通過申請日起至115年12月31日止。').end, null);
+});
+
+test('ISO 50001：「輔導期程」不是申請期間', () => {
+  const p = extractPeriod('六、輔導期程與內容\n(一)輔導期程自輔導計畫通過申請日起至115年12月31日止。');
+  assert.equal(p.end, null);
 });
 
 test('受託執行單位與補助對象', () => {

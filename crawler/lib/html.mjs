@@ -205,7 +205,7 @@ export function extractMain(html, baseUrl) {
     if (!url || seen.has(url)) return;
     const label = cleanText(`${$(a).text()} ${$(a).attr('title') || ''}`).replace(/\n/g, ' ');
     const isFile =
-      /\.(pdf|odt|docx|doc|ods|xlsx)(\?|$)/i.test(url) ||
+      /\.(pdf|odt|docx|doc|ods|xlsx|zip)(\?|$)/i.test(url) ||
       /(download|file_?id|fileid|getfile|attach|wHandNews_File|DownloadFile|Download\.ashx)/i.test(url) ||
       /\.(pdf|odt|docx)\b/i.test(label);
     if (!isFile) return;

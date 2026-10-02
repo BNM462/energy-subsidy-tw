@@ -84,6 +84,7 @@ export function validateSubsidy(s) {
     updated_at: str(s.updated_at, 40, { required: true, name: 'updated_at' }),
     hidden: !!s.hidden,
     delegate: str(s.delegate, 120),
+    period_varies: !!s.period_varies,
   };
 }
 

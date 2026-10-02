@@ -176,7 +176,7 @@ export function periodText(sub) {
   const s = sub.apply_start ? formatDate(sub.apply_start) : null;
   let e = sub.apply_end ? formatDate(sub.apply_end) : null;
   if (e && sub.apply_end_time) e += ` ${sub.apply_end_time}`;
-  if (s && e) return `${s} ～ ${e}`;
+  if (s && e) return `${s} ～ ${e}${sub.period_varies ? '（依類別不同）' : ''}`;
   if (s && sub.until_quota) return `${s} 起（額滿為止）`;
   if (s) return `${s} 起（截止日${UNKNOWN}）`;
   if (e) return `至 ${e} 止`;
@@ -228,6 +228,8 @@ export function displayTitle(sub) {
     .replace(/[（(](修正版|已結束|已結束申請|更新版?)[）)]\s*$/, '')
     .replace(/(作業要點|補助要點|作業規範|申請須知|須知|相關規定公告|相關規定|公告)$/, '')
     .replace(/要點$/, '')
+    // 沒有「」時：「動力與公用設備補助購買、受理申請期間…」→ 只留到補助名稱
+    .replace(/(補助|獎勵|計畫|專案)(購買|受理|委託|申請|相關|、|之).*$/, '$1')
     .trim();
   return name || t;
 }
