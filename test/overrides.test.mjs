@@ -40,3 +40,18 @@ test('人工排除：以編號或網址永久隱藏', () => {
   assert.equal(applyOverrides(base, { overrides: new Map(), excluded: new Set(['https://x.gov.tw/1']) }), null);
   assert.equal(applyOverrides(base, { overrides: new Map([['abc123def456', { hidden: true }]]), excluded: new Set() }), null);
 });
+
+test('依名稱套用（title:）：同計畫的各梯次、新年度都適用；個別設定優先', () => {
+  const ov = {
+    overrides: new Map([['https://x.gov.tw/2', { summary: '個別設定' }]]),
+    titleRules: [{ re: /節能服務業獎勵/, data: { amount_text: '按節能成效計算獎勵金（詳官網）', summary: '名稱規則' } }],
+    excluded: new Set(),
+  };
+  const a = applyOverrides({ id: 'a', title: '公告116年度「節能服務業獎勵」第一梯次受理申請', official_url: 'https://x.gov.tw/1' }, ov);
+  assert.equal(a.amount_text, '按節能成效計算獎勵金（詳官網）');
+  assert.equal(a.summary, '名稱規則');
+  const b = applyOverrides({ id: 'b', title: '115年度「節能服務業獎勵」第二梯次', official_url: 'https://x.gov.tw/2' }, ov);
+  assert.equal(b.summary, '個別設定');
+  assert.equal(b.amount_text, '按節能成效計算獎勵金（詳官網）');
+  assert.equal(applyOverrides({ id: 'c', title: '其他補助', official_url: 'u' }, ov).manual, undefined);
+});

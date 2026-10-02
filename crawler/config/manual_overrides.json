@@ -1,5 +1,5 @@
 {
-  "_說明": "人工修正：永久覆寫被錯誤辨識或需要精簡呈現的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）或官方網址。可覆寫欄位（日期、期程、狀態原則上一律由系統自動擷取，除非官方資料錯誤才人工修正）：title, display_title（卡片顯示名稱）, agency, announce_date, apply_start, apply_end, apply_end_time, period_text（卡片上的期間文字）, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_points（補助對象條列）, target_types（服務業/工業/機關學校/醫院／長照/農業/民眾）, amount_text, amount_details, summary（補助重點 1~2 句）, content, official_url, ongoing, hidden。日期格式 YYYY-MM-DD（西元）。所有文字須依官方原文整理，不得加入官方未載明的條件。",
+  "_說明": "人工修正：永久覆寫被錯誤辨識或需要精簡呈現的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）、官方網址，或「title:名稱關鍵字」（套用到名稱符合的所有補助，含之後的新年度、新梯次）。可覆寫欄位（日期、期程、狀態原則上一律由系統自動擷取，除非官方資料錯誤才人工修正）：title, display_title（卡片顯示名稱）, agency, announce_date, apply_start, apply_end, apply_end_time, period_text（卡片上的期間文字）, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_points（補助對象條列）, target_types（服務業/工業/機關學校/醫院／長照/農業/民眾）, amount_text, amount_details, summary（補助重點 1~2 句）, content, official_url, ongoing, hidden。日期格式 YYYY-MM-DD（西元）。所有文字須依官方原文整理，不得加入官方未載明的條件。",
   "_範例": {
     "target": "a1b2c3d4e5f6",
     "set": {
@@ -19,17 +19,6 @@
         ]
       },
       "note": "冷卻行動：精簡補助對象與重點（期程由系統自動擷取）"
-    },
-    {
-      "target": "https://www.moeaea.gov.tw/ECW/populace/news/Board.aspx?kind=3&menu_id=57&news_id=34581",
-      "set": {
-        "summary": "獎勵節能服務業（ESCO）辦理節電專案。",
-        "target": "節能服務業（申請文件須含僱用 2 名以上全職節能績效量測與驗證工程師證明等）",
-        "target_types": [
-          "服務業"
-        ]
-      },
-      "note": "依公告及附件申請書整理"
     },
     {
       "target": "https://ea01.moeaea.gov.tw/e0409/Page/ProjectExecution.aspx#row-%5B%E9%87%8D%E8%A6%81%5D116%E5%B9%B4%E3%80%8C%E7%AF%80%E8%83%BD%E7%B8%BE%E6%95%88%E4%BF%9D%E8%AD%89%E5%B0%88%E6%A1%88%E7%A4%BA%E7%AF%84%E6%8E%A8%E5%BB%A3%E8%A3%9C%E5%8A%A9%E3%80%8D%E7%94%B3%E8%AB%8B%E8%B3%87%E6%96%99%E4%B8%8B%E8%BC%89",
@@ -82,6 +71,38 @@
         "summary": "民眾汰換老舊冷氣、冰箱為節能新品，每臺可申請補助。"
       },
       "note": "依經濟部公告及申請表整理"
+    },
+    {
+      "target": "title:節能服務業獎勵",
+      "set": {
+        "summary": "獎勵節能服務業（ESCO）辦理節電專案。",
+        "target": "節能服務業（申請文件須含僱用 2 名以上全職節能績效量測與驗證工程師證明等）",
+        "target_types": [
+          "服務業"
+        ],
+        "amount_text": "按節能成效計算獎勵金（詳官網）",
+        "amount_details": []
+      },
+      "note": "獎勵金依節電成效計算，不以固定上限呈現"
+    },
+    {
+      "target": "title:廢熱與廢冷回收技術示範應用專案",
+      "set": {
+        "summary": "補助購置全新設備導入廢熱／廢冷回收技術：ORC 廢熱發電、固態熱電材料廢熱發電、工業加熱器熱輻射選擇性吸收、蓄熱式燃燒、全熱交換系統低溫廢熱回收、吸附式／吸收式廢熱製冷，及其他具顯著節能效益之技術。",
+        "target_points": [
+          "契約用電容量超過 100 瓩，且依法設立登記之法人",
+          "適用情境：廠內有鍋爐、加熱爐、高溫製程或機械蒸氣，廢熱廢冷可以回收"
+        ],
+        "target_types": [
+          "工業",
+          "服務業"
+        ],
+        "amount_details": [
+          "補助金額不得逾設備購置成本之 1/3",
+          "每案上限新臺幣 500 萬元"
+        ]
+      },
+      "note": "依能源署「廢熱與廢冷回收技術示範應用專案補助作業」頁面整理；適用情境為說明，非官方資格"
     }
   ]
 }

@@ -239,7 +239,7 @@ select {
 .agency { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
 .tag { font-size: .75rem; color: var(--text-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; line-height: 1.6; }
 .facts {
-  display: grid; grid-template-columns: 1.4fr 1.2fr .9fr; gap: 0; margin: 0 0 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0 0 10px;
   background: var(--fact-bg); border-radius: 10px; overflow: hidden;
 }
 .fact { padding: 8px 12px; min-width: 0; border-left: 1px solid var(--border); }
@@ -265,8 +265,8 @@ select {
 details.raw summary { cursor: pointer; color: var(--link); font-size: .9rem; }
 details.raw .content { margin-top: 8px; }
 @media (max-width: 640px) {
-  .facts { grid-template-columns: 1fr 1fr; }
-  .fact.f-period { grid-column: 1 / -1; border-left: 0; border-bottom: 1px solid var(--border); }
+  .facts { grid-template-columns: 1fr; }
+  .fact.f-period { border-bottom: 1px solid var(--border); }
   .fact.f-amount { border-left: 0; }
 }
 .detail[hidden] { display: none; }

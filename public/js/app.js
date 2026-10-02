@@ -132,7 +132,6 @@ function card(s) {
     el('dl', { class: 'facts' },
       fact('申請期間', shortPeriod(s), 'f-period'),
       fact('最高補助', s.amount_text, 'f-amount'),
-      fact('公告日期', s.announce_date ? formatDate(s.announce_date) : null, 'f-date'),
     ),
     el('div', { class: 'who' }, el('span', { class: 'who-label', text: '適用對象' }), categoryChips(s)),
     s.summary && el('p', { class: 'brief' }, el('span', { class: 'brief-label', text: '補助重點' }), s.summary),
@@ -213,7 +212,7 @@ function renderDetail(d, box) {
     d.content && el('details', { class: 'raw' }, el('summary', { text: '查看官方公告原文' }), el('div', { class: 'content', text: d.content })),
     d.attachments?.length && section('官方附件', links(d.attachments)),
     d.source_urls?.length > 1 && section('其他官方來源', links(d.source_urls.filter((u) => u !== d.official_url))),
-    el('p', { class: 'small', text: `資料編號：${d.id}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}${d.manual ? '　（已人工校正）' : ''}` }),
+    el('p', { class: 'small', text: `${d.announce_date ? `公告日期：${formatDate(d.announce_date)}　` : ''}資料編號：${d.id}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}${d.manual ? '　（已人工校正）' : ''}` }),
   );
   box.replaceChildren(...parts.filter((x) => x instanceof Node));
 }

@@ -30,21 +30,26 @@ export async function loadOverrides(db) {
     db.prepare('SELECT target FROM exclusions'),
   ]);
   const overrides = new Map();
+  const titleRules = []; // target 為「title:關鍵字」：套用到名稱符合的所有補助（含之後的新年度、新梯次）
   for (const r of ov.results) {
     try {
-      overrides.set(r.target, JSON.parse(r.data));
+      const data = JSON.parse(r.data);
+      if (r.target.startsWith('title:')) titleRules.push({ re: new RegExp(r.target.slice(6)), data });
+      else overrides.set(r.target, data);
     } catch {
       /* 格式錯誤的修正略過 */
     }
   }
-  return { overrides, excluded: new Set(ex.results.map((r) => r.target)) };
+  return { overrides, titleRules, excluded: new Set(ex.results.map((r) => r.target)) };
 }
 
-export function applyOverrides(sub, { overrides, excluded }) {
+export function applyOverrides(sub, { overrides, titleRules = [], excluded }) {
   if (excluded.has(sub.id) || excluded.has(sub.official_url)) return null;
-  // 依編號、官方網址或任一來源網址對應（官方網址改為正式公告後，原本的設定仍適用）
-  const o = overrides.get(sub.id) || overrides.get(sub.official_url) || (sub.source_urls || []).map((u) => overrides.get(u)).find(Boolean);
-  if (!o) return sub;
+  // 依名稱規則 → 再依編號、官方網址或任一來源網址（個別設定優先）
+  const byTitle = titleRules.filter((r) => r.re.test(sub.title || '')).map((r) => r.data);
+  const exact = overrides.get(sub.id) || overrides.get(sub.official_url) || (sub.source_urls || []).map((u) => overrides.get(u)).find(Boolean);
+  if (!byTitle.length && !exact) return sub;
+  const o = Object.assign({}, ...byTitle, exact || {});
   const merged = { ...sub, manual: true };
   for (const k of OVERRIDABLE) if (k in o) merged[k] = o[k];
   if ('announce_date' in o && /^\d{4}/.test(o.announce_date || '')) merged.year = +o.announce_date.slice(0, 4);
