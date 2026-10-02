@@ -116,3 +116,28 @@ test('懶人包、計畫頁可併入正式公告；試算與申請入口不是�
   assert.ok(!titleWorthFetching('產品補助試算'));
   assert.ok(!titleWorthFetching('立即申請設備汰換補助'));
 });
+
+test('建研所 116 年度公告（模擬）：任何機關網站刊登都能抓到、歸入今年、並觸發關注通知', async () => {
+  const { readFileSync } = await import('node:fs');
+  const cfg = JSON.parse(readFileSync(new URL('../crawler/config/programs.json', import.meta.url), 'utf8'));
+  const watch = cfg.title_watch.map((w) => new RegExp(w.pattern));
+  const { normalizeText: nt } = await import('../crawler/lib/dates.mjs');
+  const { classify } = await import('../crawler/lib/classify.mjs');
+  const titles = [
+    '訂定「一百十六年度中央政府公有既有建築物及建築公共緊急避難空間能效改善及淨零示範補助計畫申請補助作業須知」，並自即日生效。',
+    '內政部公告116年度中央政府公有既有建築物能效改善及淨零示範補助受理申請',
+  ];
+  for (const title of titles) {
+    assert.ok(watch.some((re) => re.test(nt(title))), `關注關鍵字應符合：${title}`);
+    assert.ok(classify({ title, text: '' }).isSubsidy || watch.some((re) => re.test(nt(title))));
+  }
+  const f = extractFields({
+    title: titles[0],
+    text: '三、請中央政府與其所屬機關（構）及各級國立學校，統籌所屬之公有既有建築物辦理申請，並於本須知函頒日起30日內（115年11月20日前），將申請提案之基本資料函送本所辦理。',
+    attachmentLabels: ['pdf 115年10月21日台內建研字第1157600000號-116年度…作業須知.pdf'],
+  });
+  assert.equal(f.announce_date, '2026-10-21', '公告年度應為 2026 → 顯示在今年清單');
+  assert.equal(f.apply_end, '2026-11-20');
+  // 名單類不收錄
+  assert.ok(!watch.some((re) => re.test(nt('內政部核定116年度補助中央政府公有既有建築物…入選排序名單'))) || classify({ title: '內政部核定116年度補助中央政府公有既有建築物…入選排序名單', text: '' }).isSubsidy === false);
+});
