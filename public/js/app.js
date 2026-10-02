@@ -185,9 +185,20 @@ function section(title, ...content) {
 
 function renderDetail(d, box) {
   const parts = [];
+  // 附件名稱整理：去掉「另開新視窗」、檔案大小、重複的檔名
+  const cleanLabel = (s) => {
+    let t = String(s || '')
+      .replace(/[（(]\s*另開新視窗\s*[）)]|[（(]\s*[\d.]+\s*[KMG]?B\s*[）)]|^開啟\s*|\s*檔案$/gi, '')
+      .trim()
+      .replace(/^開啟s*/, '');
+    const m = /^(.{6,}?)(?:PDF|ODT|DOCX?)?\s+\1/i.exec(t);
+    if (m) t = t.slice(m[0].length - m[1].length).trim();
+    return t;
+  };
   const links = (list) => el('ul', {}, list.map((a) => {
     const href = safeHref(a.url || a);
-    return el('li', {}, href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', text: a.label || a.url || a }) : String(a.label || a));
+    const label = cleanLabel(a.label) || a.url || a;
+    return el('li', {}, href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', text: label }) : String(label));
   }));
   // 展開後只補充卡片上沒有的資訊，不重複
   const points = targetPoints(d);
