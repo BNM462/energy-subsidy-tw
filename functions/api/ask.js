@@ -112,7 +112,7 @@ export async function onRequestPost({ request, env }) {
 
   return json({
     ok: true,
-    answer: sanitizeAnswer(result.text, subsidies.map((s) => s.official_url)),
+    answer: sanitizeAnswer(result.text, subsidies.flatMap((s) => [s.official_url, s.info_url].filter(Boolean))),
     remaining: Math.max(0, perUser - row.count),
     limit: perUser,
   });

@@ -16,7 +16,7 @@ import { normalizeText, toAdYear, extractBatches, pickBatch } from './lib/dates.
 import { taipeiYear } from '../public/js/logic.js';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
-const EXTRACTOR_VERSION = '7';
+const EXTRACTOR_VERSION = '8';
 
 const HOUR = 3600e3;
 const RECHECK_SUBSIDY_MS = 6 * HOUR;
@@ -431,7 +431,7 @@ async function main() {
         merged.source_urls = [...new Set([match.official_url, ...(match.source_urls || [])])];
         merged.official_url = doc.official_url;
       }
-      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'period_varies', 'target', 'amount_text', 'summary', 'program_name', 'doc_no', 'delegate']) {
+      for (const k of ['announce_date', 'apply_start', 'apply_end', 'apply_end_time', 'deadline_text', 'period_varies', 'purchase_text', 'target', 'amount_text', 'summary', 'program_name', 'doc_no', 'delegate']) {
         // 官方原頁更新 → 以新內容為準；其他來源 → 只補空欄位
         if (doc[k] != null && (sameOfficial || merged[k] == null)) merged[k] = doc[k];
       }

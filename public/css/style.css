@@ -281,3 +281,5 @@ details.raw .content { margin-top: 8px; }
 .examples button:disabled { opacity: .5; cursor: not-allowed; }
 .tag-kind { background: var(--surface-2); font-weight: 600; }
 .tag-energy { background: var(--open-bg); color: var(--open); border-color: transparent; }
+.purchase { margin: 0 0 8px; font-size: .92rem; color: var(--text); }
+.purchase .who-label { margin-right: 8px; }

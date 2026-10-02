@@ -189,6 +189,21 @@ export function extractBrief(text, title = '') {
   return brief.length >= 10 ? `${brief.slice(0, 90)}。` : null;
 }
 
+/**
+ * 補助購買期間（須在此期間購置設備才可申請，例：「補助購買期間:自115年1月1日起至115年12月31日止」）
+ * 回傳顯示文字「2026/01/01 ～ 2026/12/31」；沒有寫就是 null。
+ */
+export function extractPurchasePeriod(text) {
+  const t = normalizeText(text || '');
+  const m = /(補助購買期間|補助項目購買期間|補助購置期間|購買期間|購置期間)\s*[:：]\s*([^\n]{4,80})/.exec(t);
+  if (!m) return null;
+  const p = extractPeriod(`申請期間:${m[2]}`);
+  if (!p.start && !p.end) return null;
+  const f = (iso) => iso.replaceAll('-', '/');
+  if (p.start && p.end) return `${f(p.start)} ～ ${f(p.end)}`;
+  return p.end ? `至 ${f(p.end)}` : `${f(p.start)} 起`;
+}
+
 /** 受託執行單位（官方原文「委託財團法人XX辦理」） */
 export function extractDelegate(text) {
   const m = /委託\s*((?:財團法人|社團法人)[^\s，,。、；;（(]{2,24}?)\s*(?:辦理|執行|承辦)/.exec(normalizeText(text || ''));
@@ -233,6 +248,7 @@ export function extractFields({ title, text, listDate = null, attachmentText = '
     deadline_text: period.rawText,
     until_quota: period.untilQuota || /額滿為止|用罄為止/.test(all),
     period_varies: !!period.varies,
+    purchase_text: extractPurchasePeriod(body) || extractPurchasePeriod(attachmentText),
     // 法規本文（要點、辦法…）只是規定「用罄時得提前截止」，不代表已經發生
     status_flag: /(要點|辦法|規定|須知|準則|條例|規範)$/.test(normalizeText(title || '').trim()) ? null : detectStatusFlag(body),
     amount_text: amountAll.text,

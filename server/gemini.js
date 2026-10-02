@@ -28,6 +28,8 @@ export function buildContext(subsidies, now = Date.now()) {
       `狀態：${st.label}${st.reason ? `（${st.reason}）` : ''}${hot ? `；🔥${hot.text}` : left != null ? `；距截止剩 ${left} 天` : ''}`,
       `公告日期：${formatDate(s.announce_date)}`,
       `申請期間：${periodText(s)}`,
+      s.purchase_text ? `補助購買期間（須於此期間購置）：${s.purchase_text}` : null,
+      s.info_url ? `補助專區網址：${s.info_url}` : null,
       s.deadline_text ? `期限原文：${s.deadline_text}` : null,
       `適用對象類別：${categoriesOf(s).join("、") || UNKNOWN}`,
       `補助對象：${s.target || UNKNOWN}`,

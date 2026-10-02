@@ -111,6 +111,7 @@ function card(s) {
   const hot = hotInfo(s, t);
   const fresh = isNew(s, t);
   const official = safeHref(s.official_url);
+  const info = safeHref(s.info_url); // 補助專區（說明較完整、好閱讀的官方頁面）
   const detailId = `detail-${s.id}`;
   const viewsEl = el('span', { class: 'card-views', text: `瀏覽 ${fmtInt(s.views)} 次` });
   const detailBox = el('div', { class: 'detail', id: detailId, hidden: true });
@@ -133,13 +134,15 @@ function card(s) {
       fact('申請期間', shortPeriod(s), 'f-period'),
       fact('最高補助', s.amount_text, 'f-amount'),
     ),
+    s.purchase_text && el('p', { class: 'purchase' }, el('span', { class: 'who-label', text: '購買期間' }), `${s.purchase_text}（須於此期間購置）`),
     el('div', { class: 'who' }, el('span', { class: 'who-label', text: '適用對象' }), categoryChips(s)),
     s.summary && el('p', { class: 'brief' }, el('span', { class: 'brief-label', text: '補助重點' }), s.summary),
     el('div', { class: 'card-foot' },
       viewsEl,
       el('div', { class: 'actions' },
         toggle,
-        official && el('a', { class: 'btn-primary', href: official, target: '_blank', rel: 'noopener noreferrer' }, '前往官方網站 ↗'),
+        info && el('a', { class: 'btn-primary', href: info, target: '_blank', rel: 'noopener noreferrer' }, '前往補助專區 ↗'),
+        official && el('a', { class: info ? 'btn-ghost' : 'btn-primary', href: official, target: '_blank', rel: 'noopener noreferrer' }, info ? '官方公告 ↗' : '前往官方網站 ↗'),
       ),
     ),
     detailBox,
@@ -250,7 +253,7 @@ async function load({ countView = false } = {}) {
     const data = await api('/api/subsidies');
     state.serverOffset = data.server_time - Date.now();
     state.subsidies = data.subsidies || [];
-    state.officialUrls = new Set(state.subsidies.map((s) => s.official_url));
+    state.officialUrls = new Set(state.subsidies.flatMap((s) => [s.official_url, s.info_url].filter(Boolean)));
     $('#updated').textContent = data.last_data_change_at ? formatDate(taipeiDate(Date.parse(data.last_data_change_at))) : '尚無資料';
     tick();
     render();

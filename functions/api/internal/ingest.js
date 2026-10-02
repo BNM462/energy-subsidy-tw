@@ -6,7 +6,7 @@ const SUB_COLS = [
   'id', 'dedupe_key', 'title', 'agency', 'announce_date', 'year', 'apply_start', 'apply_end', 'apply_end_time',
   'deadline_text', 'until_quota', 'status_flag', 'target', 'target_types', 'amount_text', 'amount_details', 'summary',
   'content', 'official_url', 'source_urls', 'attachments', 'signals', 'doc_no', 'program_name', 'link_status',
-  'content_hash', 'first_seen_at', 'updated_at', 'hidden', 'delegate', 'period_varies', 'period_text',
+  'content_hash', 'first_seen_at', 'updated_at', 'hidden', 'delegate', 'period_varies', 'period_text', 'purchase_text',
 ];
 const JSON_COLS = new Set(['target_types', 'amount_details', 'source_urls', 'attachments', 'signals']);
 
