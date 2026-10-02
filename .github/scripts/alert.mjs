@@ -43,10 +43,22 @@ try {
 
 const open = JSON.parse(gh('issue', 'list', '--label', LABEL, '--state', 'open', '--json', 'number,updatedAt', '--limit', '1'));
 const runUrl = process.env.RUN_URL;
+// 「@帳號」提及：GitHub 對提及的通知預設會寄 Email，比「關注專案」可靠
+const owner = process.env.GITHUB_REPOSITORY_OWNER;
+const mention = owner ? `@${owner} ` : '';
+
+// 手動測試通知（GitHub Actions 頁面勾選「test_notify」執行）
+if (process.env.TEST_NOTIFY === '1') {
+  const body = `${mention}這是測試通知：如果你在信箱收到這封信，代表網站異常時你也會收到通知。（測試時間 ${new Date().toISOString()}）`;
+  const n = gh('issue', 'create', '--title', '✅ 通知測試', '--body', body);
+  gh('issue', 'close', n.split('/').pop(), '--comment', '測試完成，自動關閉。');
+  console.log('已送出測試通知');
+  process.exit(0);
+}
 
 if (problems.length) {
   const body = [
-    '自動檢查發現以下問題（其他來源與既有資料不受影響，網站仍正常運作）：',
+    `${mention}自動檢查發現以下問題（其他來源與既有資料不受影響，網站仍正常運作）：`,
     '',
     ...problems,
     '',
@@ -64,7 +76,7 @@ if (problems.length) {
     console.log('問題單已存在，24 小時內不重複通知');
   }
 } else if (open.length && !crawlFailed) {
-  gh('issue', 'close', String(open[0].number), '--comment', `已恢復正常（${new Date().toISOString()}）。`);
+  gh('issue', 'close', String(open[0].number), '--comment', `${mention}已恢復正常（${new Date().toISOString()}）。`);
   console.log('已關閉問題單');
 } else {
   console.log('一切正常');

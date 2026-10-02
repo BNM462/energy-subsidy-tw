@@ -1,0 +1,25 @@
+name: 測試異常通知
+
+# 手動執行：建立一張「@你」的測試問題單並立即關閉，用來確認信箱收得到通知
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 送出測試通知
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_NOTIFY: '1'
+        run: node .github/scripts/alert.mjs
