@@ -269,3 +269,4 @@ details.raw .content { margin-top: 8px; }
   .fact.f-period { grid-column: 1 / -1; border-left: 0; border-bottom: 1px solid var(--border); }
   .fact.f-amount { border-left: 0; }
 }
+.detail[hidden] { display: none; }
