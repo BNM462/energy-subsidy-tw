@@ -527,6 +527,17 @@ async function main() {
     return sub && sub.year >= year;
   });
 
+  // 安全網：去重鍵在資料庫中必須唯一。若兩筆不同補助算出相同的鍵，後者加上編號後綴，避免整批寫入失敗
+  {
+    const owner = new Map(); // dedupe_key -> id
+    for (const s of state.subsidies) if (!upserts.has(s.id)) owner.set(s.dedupe_key, s.id);
+    for (const s of upserts.values()) {
+      const other = owner.get(s.dedupe_key);
+      if (other && other !== s.id) s.dedupe_key = `${s.dedupe_key}|${s.id}`;
+      owner.set(s.dedupe_key, s.id);
+    }
+  }
+
   const finishedAt = nowIso();
   const stats = {
     sources: sourceResults.length,

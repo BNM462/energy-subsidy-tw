@@ -78,7 +78,11 @@ export function findMatch(doc, existing) {
   // 重點監測計畫有固定身分（program:編號），只依身分或網址對應，不做名稱模糊比對
   const isProgram = (x) => String(x.dedupe_key || '').startsWith('program:');
   if (isProgram(doc)) {
-    return existing.find((e) => e.dedupe_key === doc.dedupe_key || e.official_url === doc.official_url || (e.source_urls || []).includes(doc.official_url)) || null;
+    return (
+      existing.find((e) => e.dedupe_key === doc.dedupe_key) ||
+      existing.find((e) => e.official_url === doc.official_url || (e.source_urls || []).includes(doc.official_url)) ||
+      null
+    );
   }
   // 一般公告不可被模糊合併進重點監測計畫（只允許網址相同）
   const urlsOnly = existing.filter(isProgram);
