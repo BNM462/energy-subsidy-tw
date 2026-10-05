@@ -271,6 +271,14 @@ details.raw .content { margin-top: 8px; }
 }
 .detail[hidden] { display: none; }
 
+/* 展開詳細資訊時，長網址或長檔名在卡片內換行，不把整頁撐寬 */
+.cards, .detail, .detail ul { grid-template-columns: minmax(0, 1fr); }
+.card { min-width: 0; }
+.facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 640px) { .facts { grid-template-columns: minmax(0, 1fr); } }
+.detail p, .detail li, .detail a, .detail .content { overflow-wrap: anywhere; }
+.detail { max-width: 72em; }
+
 /* 智慧小幫手：今日額度用完提示 */
 .msg.quota { align-self: stretch; max-width: 100%; background: var(--surface); border: 1px solid var(--brand); border-left: 4px solid var(--brand); white-space: normal; }
 .msg.quota p { margin: 0 0 6px; }

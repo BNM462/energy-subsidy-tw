@@ -185,12 +185,20 @@ function section(title, ...content) {
   return el('section', {}, el('h3', { text: title }), ...content);
 }
 
+function hostLabel(u) {
+  try {
+    return `官方網頁（${new URL(u).hostname}）`;
+  } catch {
+    return String(u);
+  }
+}
+
 function renderDetail(d, box) {
   const parts = [];
   // 附件名稱整理：去掉「另開新視窗」、檔案大小、重複的檔名
   const cleanLabel = (s) => {
     let t = String(s || '')
-      .replace(/[（(]\s*另開新視窗\s*[）)]|[（(]\s*[\d.]+\s*[KMG]?B\s*[）)]|^開啟\s*|\s*檔案$/gi, '')
+      .replace(/[（(]\s*(另開新視窗|開新視窗顯示|開新視窗|新視窗開啟)\s*[）)]|\.(pdf|odt|docx?|xlsx?|zip)檔?(?=$|[（(\s])|[（(]\s*[\d.]+\s*[KMG]?B\s*[）)]|^開啟\s*|\s*檔案$/gi, '')
       .trim()
       .replace(/^開啟\s*/, '');
     const m = /^(.{6,}?)(?:PDF|ODT|DOCX?)?\s+\1/i.exec(t);
@@ -199,7 +207,8 @@ function renderDetail(d, box) {
   };
   const links = (list) => el('ul', {}, list.map((a) => {
     const href = safeHref(a.url || a);
-    const label = cleanLabel(a.label) || a.url || a;
+    // 沒有名稱的來源只顯示網站名稱，不印出冗長的編碼網址
+    const label = cleanLabel(a.label) || hostLabel(a.url || a);
     return el('li', {}, href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', text: label }) : String(label));
   }));
   // 展開後只補充卡片上沒有的資訊，不重複
