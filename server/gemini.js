@@ -33,7 +33,7 @@ export function buildContext(subsidies, now = Date.now()) {
       s.deadline_text ? `期限原文：${s.deadline_text}` : null,
       `適用對象類別：${categoriesOf(s).join("、") || UNKNOWN}`,
       `補助對象：${s.target || UNKNOWN}`,
-      `補助金額：${s.amount_text || UNKNOWN}`,
+      `補助金額：${s.amount_unverified ? '尚未人工確認，請民眾查閱官方公告（不可自行推測金額）' : s.amount_text || UNKNOWN}`,
       `補助內容：${(s.summary || UNKNOWN).slice(0, 220)}`,
       `官方網址：${s.official_url}`,
     ].filter(Boolean).join('\n');

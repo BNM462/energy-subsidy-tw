@@ -132,7 +132,9 @@ function card(s) {
     el('p', { class: 'agency' }, s.agency, ...tags.map((t) => el('span', { class: 'tag', text: t })), ...(s.tags || []).map((t) => el('span', { class: `tag tag-kind${/節能/.test(t) ? ' tag-energy' : ''}`, text: t }))),
     el('dl', { class: 'facts' },
       fact('申請期間', shortPeriod(s), 'f-period'),
-      fact('最高補助', s.amount_text, 'f-amount'),
+      s.amount_unverified
+        ? el('div', { class: 'fact f-amount' }, el('dt', { text: '最高補助' }), el('dd', { class: 'unknown', text: '請見官方公告（尚未人工確認）' }))
+        : fact('最高補助', s.amount_text, 'f-amount'),
     ),
     s.purchase_text && el('p', { class: 'purchase' }, el('span', { class: 'who-label', text: '購買期間' }), `${s.purchase_text}（須於此期間購置）`),
     el('div', { class: 'who' }, el('span', { class: 'who-label', text: '適用對象' }), categoryChips(s)),

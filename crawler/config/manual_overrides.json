@@ -1,5 +1,5 @@
 {
-  "_說明": "人工修正：永久覆寫被錯誤辨識或需要精簡呈現的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）、官方網址，或「title:名稱關鍵字」（套用到名稱符合的所有補助，含之後的新年度、新梯次）。可覆寫欄位（日期、期程、狀態原則上一律由系統自動擷取，除非官方資料錯誤才人工修正）：title, display_title（卡片顯示名稱）, agency, announce_date, apply_start, apply_end, apply_end_time, period_text（卡片上的期間文字）, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_points（補助對象條列）, target_types（服務業/工業/機關學校/醫院／長照/農業/民眾）, amount_text, amount_details, summary（補助重點 1~2 句）, content, official_url, ongoing, hidden。日期格式 YYYY-MM-DD（西元）。所有文字須依官方原文整理，不得加入官方未載明的條件。",
+  "_說明": "人工修正：永久覆寫被錯誤辨識或需要精簡呈現的欄位，爬蟲不會改回去。target 可填補助編號（網站詳細資訊中的「資料編號」）、官方網址，或「title:名稱關鍵字」（套用到名稱符合的所有補助，含之後的新年度、新梯次）。可覆寫欄位（日期、期程、狀態原則上一律由系統自動擷取，除非官方資料錯誤才人工修正）：title, display_title（卡片顯示名稱）, agency, announce_date, apply_start, apply_end, apply_end_time, period_text（卡片上的期間文字）, deadline_text, until_quota, status_flag(quota_full/budget_exhausted/closed_early/closed/null), target, target_points（補助對象條列）, target_types（服務業/工業/機關學校/醫院／長照/農業/民眾）, amount_text, amount_details, summary（補助重點 1~2 句）, content, official_url, ongoing, hidden。金額（amount_text、amount_details）須人工核對官方文件後才填；以「title:」套用時請加 amount_year（核對過的公告年度，西元），新年度公告未核對前網站會顯示「尚未人工確認」。日期格式 YYYY-MM-DD（西元）。所有文字須依官方原文整理，不得加入官方未載明的條件。",
   "_範例": {
     "target": "a1b2c3d4e5f6",
     "set": {
@@ -52,7 +52,8 @@
           "工業",
           "醫院／長照"
         ],
-        "info_url": "https://www.mdss.org.tw/subsidy/index/index.aspx"
+        "info_url": "https://www.mdss.org.tw/subsidy/index/index.aspx",
+        "amount_year": 2026
       },
       "note": "依動力與公用設備補助作業要點（mdss 補助專區）整理"
     },
@@ -66,7 +67,10 @@
           "超過 110 萬～350 萬度部分：每度 2 元",
           "超過 350 萬～700 萬度部分：每度 3 元",
           "超過 700 萬度部分：每度 4 元",
-          "以節電專案契約金額總和 49% 為上限；節電服務專案按核定經費 15% 計算"
+          "以節電專案契約金額總和 49% 為上限；節電服務專案按核定經費 15% 計算",
+          "節電專案含新設能源管理資訊系統（EMIS）者：系統涵蓋範圍內超過 110 萬度部分，每度再加 1 元",
+          "客戶為中小企業者：每度再加 0.5 元",
+          "受獎勵單位每年度獎勵金總額上限 1 億元"
         ],
         "target_points": [
           "節能服務業（ESCO）",
@@ -77,7 +81,8 @@
         "target_types": [
           "服務業"
         ],
-        "info_url": "https://ea01.moeaea.gov.tw/e0409/page/AwardIntroduction.aspx"
+        "info_url": "https://ea01.moeaea.gov.tw/e0409/page/AwardIntroduction.aspx",
+        "amount_year": 2026
       },
       "note": "依節能服務業獎勵要點（能源技術服務業資訊網）整理；獎勵金依節電成效計算"
     },
@@ -97,7 +102,9 @@
           "補助金額不得逾設備購置成本之 1/3",
           "每案上限新臺幣 500 萬元"
         ],
-        "info_url": "https://www.moeaea.gov.tw/ECW/populace/content/Content.aspx?menu_id=8786"
+        "info_url": "https://www.moeaea.gov.tw/ECW/populace/content/Content.aspx?menu_id=8786",
+        "amount_text": "最高新臺幣 500 萬元",
+        "amount_year": 2026
       },
       "note": "依能源署「廢熱與廢冷回收技術示範應用專案補助作業」頁面整理；適用情境為說明，非官方資格"
     },
@@ -105,7 +112,18 @@
       "target": "title:住宅家電汰舊換新節能補助",
       "set": {
         "summary": "民眾汰換老舊冷氣、冰箱為節能新品，每臺可申請補助。",
-        "info_url": "https://save3000.moeaea.gov.tw"
+        "info_url": "https://save3000.moeaea.gov.tw",
+        "amount_text": "每臺冷氣、冰箱補助新臺幣 3,000 元",
+        "amount_details": [
+          "每臺冷氣、冰箱補助新臺幣 3,000 元",
+          "可另向國稅局申請退還減徵貨物稅，但不得再申請其他機關補助"
+        ],
+        "target_points": [
+          "家中老舊冷氣機或電冰箱汰換為能源效率 1 級新品",
+          "須檢附舊機之廢四機回收聯單（回收日期須在補助購買期間內）",
+          "發票開立日期須在補助購買期間內，且發票上不得有買受人統一編號"
+        ],
+        "amount_year": 2025
       },
       "note": "補助專區：住宅家電汰舊換新節能補助網站"
     },
@@ -118,11 +136,15 @@
           "單一申請單位契約容量 100kW 以上，或集團整合累計 500kW 以上"
         ],
         "amount_details": [
-          "單一申請：補助上限 500 萬元",
-          "集團申請：補助上限 1,500 萬元",
-          "補助比例：非中小企業 20%～30%、中小企業 30%～40%（依是否為優先改善項目）"
+          "單一績效保證計畫：上限新臺幣 500 萬元，且原則不超過計畫執行經費 20%",
+          "整合自身及所屬（轄）單位累計契約容量達 500 瓩以上：上限新臺幣 1,500 萬元，且原則不超過計畫執行經費 20%",
+          "中小企業：補助比例上限可提高至計畫執行經費 30%",
+          "優先補助項目（冰水系統、服務業中央空調空氣側、壓縮空氣、熱泵熱水、冷凍（藏）庫系統化改善、建置 EMIS 等）：該部分經費補助比例上限再提高 10%",
+          "績效保證計畫節能率不得低於 10%"
         ],
-        "info_url": "https://ea01.moeaea.gov.tw/e0409/Page/PerformanceForm.aspx"
+        "info_url": "https://ea01.moeaea.gov.tw/e0409/Page/PerformanceForm.aspx",
+        "amount_text": "最高新臺幣 1,500 萬元（依申請類型不同）",
+        "amount_year": 2026
       },
       "note": "依能源署節能績效保證示範推廣補助專區整理"
     },
@@ -135,7 +157,9 @@
           "補助款以計畫總經費三分之一為限",
           "每案補助款上限 500 萬元"
         ],
-        "info_url": "https://www.essc.org.tw/subsidy/eco_apply_info/info.aspx"
+        "info_url": "https://www.essc.org.tw/subsidy/eco_apply_info/info.aspx",
+        "amount_text": "最高新臺幣 500 萬元",
+        "amount_year": 2026
       },
       "note": "依商業服務業節能設備補助網站「系統節能專案補助申請懶人包」整理"
     },
@@ -153,7 +177,19 @@
           "機關學校",
           "醫院／長照"
         ],
-        "info_url": "https://www.essc.org.tw/subsidy/change_apply/info.aspx"
+        "info_url": "https://www.essc.org.tw/subsidy/change_apply/info.aspx",
+        "amount_text": "依設備項目定額補助，每家最高 50 萬元",
+        "amount_details": [
+          "空調：每台以額定冷氣能力每瓩（kW）2,500 元為上限",
+          "電冰箱：每台上限 3,000 元",
+          "瓦斯爐（燃氣台爐）：每台上限 2,000 元",
+          "照明燈具：每具上限 500 元",
+          "冷凍櫃：每台上限 8,000 元",
+          "空氣源式熱泵熱水器：每台以額定加熱能力每瓩（kW）5,000 元為上限",
+          "每項設備補助含稅購置金額 50%，且不超過各項目上限",
+          "同一業者當年度補助上限 50 萬元（可分次申請）"
+        ],
+        "amount_year": 2026
       },
       "note": "依商業服務業節能設備補助網站「設備汰換補助懶人包」整理"
     },
@@ -164,7 +200,14 @@
         "target_points": [
           "第一、二類：法人（醫院、學校、旅館、商辦、機關、工廠、農產品經營者）",
           "第三類：老人福利、長照、身障日照／住宿等高溫脆弱族群照顧場所"
-        ]
+        ],
+        "amount_text": "最高新臺幣 500 萬元",
+        "amount_details": [
+          "申請計畫每案最高補助新臺幣 500 萬元",
+          "第一類及第二類：補助比率原則上未達計畫總執行經費 50%",
+          "第三類：補助比率最高可達計畫總執行經費 100%"
+        ],
+        "amount_year": 2026
       },
       "note": "冷卻行動：精簡補助對象與重點（期程由系統自動擷取）"
     }

@@ -55,3 +55,19 @@ test('依名稱套用（title:）：同計畫的各梯次、新年度都適用�
   assert.equal(b.amount_text, '按節能成效計算獎勵金（詳官網）');
   assert.equal(applyOverrides({ id: 'c', title: '其他補助', official_url: 'u' }, ov).manual, undefined);
 });
+
+test('金額：沒有人工核對的金額不顯示；依名稱套用的金額只適用於核對過的年度', () => {
+  const none = { overrides: new Map(), titleRules: [], excluded: new Set() };
+  const r = applyOverrides({ ...base, amount_text: '最高新臺幣 10 萬元', amount_details: ['得處新臺幣5萬元'] }, none);
+  assert.equal(r.amount_text, null);
+  assert.deepEqual(r.amount_details, []);
+  assert.ok(r.amount_unverified);
+  const ov = { overrides: new Map(), titleRules: [{ re: /動力與公用設備/, data: { amount_text: '每年最高 500 萬元', amount_year: 2026, summary: '說明' } }], excluded: new Set() };
+  const y115 = applyOverrides({ id: 'a', title: '115年度「動力與公用設備補助」', official_url: 'u1', year: 2026 }, ov);
+  assert.equal(y115.amount_text, '每年最高 500 萬元');
+  assert.ok(!y115.amount_unverified);
+  const y116 = applyOverrides({ id: 'b', title: '116年度「動力與公用設備補助」', official_url: 'u2', year: 2027, amount_text: '自動擷取' }, ov);
+  assert.equal(y116.amount_text, null, '新年度金額未核對前不沿用');
+  assert.ok(y116.amount_unverified);
+  assert.equal(y116.summary, '說明');
+});

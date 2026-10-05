@@ -43,16 +43,31 @@ export async function loadOverrides(db) {
   return { overrides, titleRules, excluded: new Set(ex.results.map((r) => r.target)) };
 }
 
+const AMOUNT_FIELDS = ['amount_text', 'amount_details'];
+
 export function applyOverrides(sub, { overrides, titleRules = [], excluded }) {
   if (excluded.has(sub.id) || excluded.has(sub.official_url)) return null;
   // 依名稱規則 → 再依編號、官方網址或任一來源網址（個別設定優先）
-  const byTitle = titleRules.filter((r) => r.re.test(sub.title || '')).map((r) => r.data);
+  const byTitle = titleRules
+    .filter((r) => r.re.test(sub.title || ''))
+    .map((r) => {
+      // 依名稱套用的金額只適用於人工核對過的年度（amount_year）；新年度的金額可能調整，不沿用
+      if (r.data.amount_year == null || r.data.amount_year === sub.year) return r.data;
+      const d = { ...r.data };
+      for (const k of AMOUNT_FIELDS) delete d[k];
+      return d;
+    });
   const exact = overrides.get(sub.id) || overrides.get(sub.official_url) || (sub.source_urls || []).map((u) => overrides.get(u)).find(Boolean);
-  if (!byTitle.length && !exact) return sub;
   const o = Object.assign({}, ...byTitle, exact || {});
-  const merged = { ...sub, manual: true };
+  const merged = byTitle.length || exact ? { ...sub, manual: true } : { ...sub };
   for (const k of OVERRIDABLE) if (k in o) merged[k] = o[k];
   if ('announce_date' in o && /^\d{4}/.test(o.announce_date || '')) merged.year = +o.announce_date.slice(0, 4);
+  // 金額只顯示人工核對過的內容；系統自動擷取的金額不當作事實呈現（不知道就不要猜）
+  if (!('amount_text' in o)) {
+    merged.amount_text = null;
+    merged.amount_details = [];
+    merged.amount_unverified = true;
+  }
   return merged.hidden ? null : merged;
 }
 
