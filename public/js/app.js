@@ -203,6 +203,9 @@ function renderDetail(d, box) {
       .replace(/^開啟\s*/, '');
     const m = /^(.{6,}?)(?:PDF|ODT|DOCX?)?\s+\1/i.exec(t);
     if (m) t = t.slice(m[0].length - m[1].length).trim();
+    // 「pdf (檔案下載)名稱」→「名稱（PDF）」，同名不同格式的附件才分得出來
+    const kind = /^(pdf|odt|ods|docx?|xlsx?|zip)\s*[（(]\s*檔案下載\s*[）)]\s*/i.exec(t);
+    if (kind) t = `${t.slice(kind[0].length)}（${kind[1].toUpperCase()}）`;
     return t;
   };
   const links = (list) => el('ul', {}, list.map((a) => {
