@@ -56,3 +56,12 @@ test('節能補助判定：看內容不是只看名稱', () => {
   assert.ok(!titleWorthFetching('2025綠建築在臺灣作品專輯徵求代售單位網頁公告'));
   assert.ok(titleWorthFetching('公告115年度「節能服務業獎勵」第二梯次受理申請期間'));
 });
+
+test('金額：罰鍰條文與利益衝突附件的金額不當作補助上限', () => {
+  const text = [
+    '違反者，得處新臺幣5萬元以上50萬元以下罰鍰，並得按次處罰。',
+    '指每筆新臺幣1萬元。同年度（每年1月1日起至12月31日止）同一補助對象合計不逾10萬元。',
+  ].join('\n');
+  assert.deepEqual(extractAmount(text), { text: null, details: [] });
+  assert.equal(extractAmount(text + '\n每案補助上限新臺幣500萬元。').text, '最高新臺幣 500 萬元');
+});

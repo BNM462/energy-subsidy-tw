@@ -20,6 +20,7 @@ export function formatNtd(n) {
 }
 
 const AMOUNT_CONTEXT = /(最高|上限|至多|每案|每家|每台|每臺|每戶|每件|補助|獎勵|補貼)/;
+const PENALTY_OR_BOILERPLATE = /罰鍰|罰金|處罰|得處新臺幣|利益衝突|身分關係|小額補助|合計不逾\s*10\s*萬元|每筆新臺幣\s*1\s*萬元/;
 const AMOUNT_RE = /(?:新臺幣|新台幣|NT\$?)?\s*\d[\d,]*(?:\.\d+)?\s*(?:億|萬|千)?\s*元/g;
 
 /**
@@ -33,6 +34,8 @@ export function extractAmount(text) {
   const found = [];
   for (const s of sentences) {
     if (!AMOUNT_CONTEXT.test(s)) continue;
+    // 罰則條文（得處…罰鍰）與公職人員利益衝突附件（小額補助門檻）的金額都不是補助上限
+    if (PENALTY_OR_BOILERPLATE.test(s)) continue;
     AMOUNT_RE.lastIndex = 0;
     let m;
     while ((m = AMOUNT_RE.exec(s))) {
