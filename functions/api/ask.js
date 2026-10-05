@@ -95,7 +95,7 @@ export async function onRequestPost({ request, env }) {
   if (!subsidies.length) {
     result = { ok: true, text: NO_ANSWER };
   } else {
-    result = await askGemini(env, question, buildContext(subsidies));
+    result = await askGemini(env, question, buildContext(subsidies, Date.now(), question));
   }
   if (!result.ok) {
     console.warn(`智慧小幫手暫停：${result.reason}`);

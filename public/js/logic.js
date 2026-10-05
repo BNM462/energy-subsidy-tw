@@ -171,8 +171,14 @@ export function sortSubsidies(list, now = Date.now()) {
 }
 
 /** 補助期間文字 */
+// 期間文字開頭的梯次（如「第四梯（暫定） 2026/11/02 ～ 11/30」）：梯次改以標籤呈現，期間只留日期
+const PERIOD_BATCH = /^第\s*([一二三四五六七八九十\d]+)\s*梯次?\s*([（(]暫定[）)])?\s*/;
+
 export function periodText(sub) {
-  if (sub.period_text) return sub.period_text;
+  if (sub.period_text) {
+    const m = PERIOD_BATCH.exec(sub.period_text);
+    return m ? `${sub.period_text.slice(m[0].length)}${m[2] ? '（暫定）' : ''}` : sub.period_text;
+  }
   const s = sub.apply_start ? formatDate(sub.apply_start) : null;
   let e = sub.apply_end ? formatDate(sub.apply_end) : null;
   if (e && sub.apply_end_time) e += ` ${sub.apply_end_time}`;
@@ -246,7 +252,7 @@ export function titleTags(sub) {
     const tens = /十/.test(cy[0]) ? (cy[2] ? D[cy[2]] : 1) : 0;
     tags.push(`${100 + tens * 10 + (cy[3] ? D[cy[3]] : 0)}年度`);
   }
-  const b = /第\s*([一二三四五六七八九十\d]+)\s*(梯次|梯|次|期)/.exec(t);
+  const b = /第\s*([一二三四五六七八九十\d]+)\s*(梯次|梯|次|期)/.exec(t) || PERIOD_BATCH.exec(sub.period_text || '');
   if (b) tags.push(`第${/^\d+$/.test(b[1]) ? CN_NUM[+b[1] - 1] || b[1] : b[1]}梯次`);
   return tags;
 }

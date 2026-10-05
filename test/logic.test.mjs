@@ -98,3 +98,14 @@ test('排序規則', () => {
   const ids = sortSubsidies(list, now).map((s) => s.id);
   assert.deepEqual(ids, ['newest', 'newOlder', 'openNear', 'openFar', 'openNoEnd', 'upcoming', 'unknown', 'closedRecent', 'closedOld']);
 });
+
+test('梯次統一以標籤呈現：期間文字開頭的梯次移到標籤，暫定標在日期後', async () => {
+  const { periodText, titleTags } = await import('../public/js/logic.js');
+  const a = { title: '提升商業服務業營運效能強化韌性計畫', period_text: '第四梯 2026/10/01 ～ 10/30 17:00' };
+  assert.equal(periodText(a), '2026/10/01 ～ 10/30 17:00');
+  assert.deepEqual(titleTags(a), ['第四梯次']);
+  const b = { title: '韌性計畫', period_text: '第三梯（暫定） 2026/11/02 ～ 11/30 17:00' };
+  assert.equal(periodText(b), '2026/11/02 ～ 11/30 17:00（暫定）');
+  assert.deepEqual(titleTags(b), ['第三梯次']);
+  assert.deepEqual(titleTags({ title: '公告116年度「廢熱與廢冷回收技術示範應用專案」第2梯次受理申請補助期間' }), ['116年度', '第二梯次']);
+});

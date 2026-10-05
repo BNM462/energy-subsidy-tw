@@ -95,3 +95,27 @@ test('CORS 來源限制', () => {
   assert.ok(!isAllowedOrigin('https://energy-subsidy-tw.pages.dev.evil.com', env));
   assert.ok(!isAllowedOrigin(null, env));
 });
+
+test('主要模型忙碌（503）時先稍候重試同一模型，成功就不改用備援模型', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (calls.length === 1) return { ok: false, status: 503 };
+    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: '答案' }] } }] }) };
+  };
+  const env = { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'main', GEMINI_FALLBACK_MODEL: 'lite', GEMINI_RETRY_MS: 0 };
+  const r = await askGemini(env, '問題', 'ctx', { fetchImpl });
+  assert.equal(r.model, 'main');
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((u) => u.includes('/main:')));
+});
+
+test('小幫手資料：與問題相關的補助排在最前面並標示', () => {
+  const subs = [
+    { id: 'a', title: '動力與公用設備補助', agency: '能源署', summary: '補助空氣壓縮機、風機、泵', target_types: ['工業'], official_url: 'https://a' },
+    { id: 'b', title: '冷卻行動創新示範補助計畫', agency: '氣候署', summary: '空調冷卻設備汰換為冰水主機', target_points: ['法人（醫院、學校、旅館）'], official_url: 'https://b' },
+  ];
+  const ctx = buildContext(subs, Date.now(), '我是旅館，想汰換空調系統');
+  assert.ok(ctx.includes('系統初步比對'));
+  assert.ok(ctx.indexOf('冷卻行動') < ctx.indexOf('動力與公用設備'));
+});
