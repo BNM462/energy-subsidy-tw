@@ -559,7 +559,7 @@ async function main() {
       if (Date.now() - startedMs > TIME_BUDGET_MS) break;
       try {
         const text = await fullSourceText(s);
-        const r = await api('/api/internal/ai-extract', { method: 'POST', body: JSON.stringify({ title: s.title, agency: s.agency, text }), signal: AbortSignal.timeout(120000) });
+        const r = await api('/api/internal/ai-extract', { method: 'POST', body: JSON.stringify({ title: s.title, agency: s.agency, text }), signal: AbortSignal.timeout(240000) });
         if (!r.ok) {
           log(`AI 整理暫停（${r.reason}）：${s.title}`);
           if (r.reason === 'daily_cap') break;

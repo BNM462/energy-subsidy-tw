@@ -16,7 +16,7 @@ for (const url of urls) {
       method: 'POST',
       headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
       body: JSON.stringify({ title, agency: '', text }),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(240000),
     });
     const r = await res.json();
     if (!r.ok) {
