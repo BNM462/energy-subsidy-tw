@@ -15,6 +15,9 @@ const SYSTEM = `你是政府補助公告的整理助手。請閱讀使用者提�
 - summary：補助重點，1～2 句、80 字內。寫申請者最在意的內容：補助什麼（項目或設備）、補助比例上限或門檻（如節能率）、優先或加碼條件。
 - amount_text：卡片「最高補助」欄，40 字內。例如「最高新臺幣 500 萬元」「補助比率最高 100%」「依設備項目定額補助」。有多種上限時寫最高者並加註「（依申請類型不同）」。
 - amount_details：金額明細條列，最多 8 條，每條 80 字內。只寫申請者可獲得多少：各類別上限、補助比例、加碼條件、每家或每年上限。不寫撥款期數、核銷或請款方式。
+- is_event：公告若是活動（說明會、觀摩、交流、課程、研習、工作坊）而不是補助本身，填 true，否則 false。
+  活動公告的欄位改這樣寫：summary 寫參加者能獲得什麼；amount_text 寫參加費用（例如「免費參加」，原文沒寫就 null）；amount_details 留空；target_points 寫適合參加的對象；event_time 寫活動日期與時間（例如「2026/10/21（三）13:30–16:30」，可加地點城市）。
+- event_time：只有活動公告才填，其餘填 null。
 - target_points：補助對象條列，最多 6 條，每條 60 字內。寫申請資格、規模門檻、適用場所與主要限制；不寫「無不予補助情形」「未獲其他補助」這類一般性規定。`;
 
 const SCHEMA = {
@@ -24,8 +27,10 @@ const SCHEMA = {
     amount_text: { type: 'STRING', nullable: true },
     amount_details: { type: 'ARRAY', items: { type: 'STRING' } },
     target_points: { type: 'ARRAY', items: { type: 'STRING' } },
+    is_event: { type: 'BOOLEAN' },
+    event_time: { type: 'STRING', nullable: true },
   },
-  required: ['summary', 'amount_text', 'amount_details', 'target_points'],
+  required: ['summary', 'amount_text', 'amount_details', 'target_points', 'is_event', 'event_time'],
 };
 
 // ---------- 數字檢查：AI 寫出的每個數字都必須出現在官方原文 ----------
@@ -91,6 +96,8 @@ export function sanitizeFields(raw, sourceText) {
       .map((x) => keep('target_points', x))
       .filter(Boolean),
   };
+  out.is_event = raw?.is_event === true;
+  out.event_time = out.is_event ? keep('event_time', str(raw?.event_time, 80)) : null;
   // 金額明細的數字有錯時，連同卡片上的最高補助一起不採用（避免只剩部分正確的金額資訊）
   if (dropped.some((d) => d.startsWith('amount_details'))) {
     if (out.amount_text) dropped.push(`amount_text：${out.amount_text}（明細有誤，一併不採用）`);

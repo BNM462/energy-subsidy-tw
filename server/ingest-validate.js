@@ -99,6 +99,8 @@ function aiFields(v) {
     amount_text: str(v.amount_text, 80),
     amount_details: strArray(v.amount_details, 8, 120),
     target_points: strArray(v.target_points, 6, 100),
+    is_event: v.is_event === true,
+    event_time: str(v.event_time, 80),
     model: str(v.model, 60),
     at: str(v.at, 40),
   };

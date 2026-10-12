@@ -72,6 +72,11 @@ export function applyOverrides(sub, { overrides, titleRules = [], excluded }) {
   const ai = sub.ai_fields || {};
   const fromAi = (k) => !(k in o) && (Array.isArray(ai[k]) ? ai[k].length : ai[k]);
   if (fromAi('summary')) merged.summary = ai.summary;
+  // 活動公告（說明會、觀摩等）：期間欄改顯示活動時間，並標示「活動」
+  if (ai.is_event) {
+    if (ai.event_time && !('period_text' in o)) merged.period_text = `活動時間 ${ai.event_time}`;
+    if (!('tags' in o)) merged.tags = ['活動'];
+  }
   if (fromAi('target_points')) merged.target_points = ai.target_points;
   if (fromAi('amount_text')) {
     merged.amount_text = ai.amount_text;

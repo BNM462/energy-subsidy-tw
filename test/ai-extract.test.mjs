@@ -66,3 +66,15 @@ test('顯示優先順序：人工整理 > AI 整理 > 規則擷取；沒有可�
   assert.equal(c.amount_text, null);
   assert.ok(c.amount_unverified);
 });
+
+test('活動公告：期間欄顯示活動時間並標示活動；費用照原文', () => {
+  const src = '示範觀摩交流活動 活動時間｜2026/10/21 (三) 13:30–16:30 免費參加';
+  const { fields } = sanitizeFields({ summary: '實地導覽', amount_text: '免費參加', amount_details: [], target_points: ['商業服務業者'], is_event: true, event_time: '2026/10/21（三）13:30–16:30' }, src);
+  assert.equal(fields.is_event, true);
+  assert.equal(fields.event_time, '2026/10/21（三）13:30–16:30');
+  const none = { overrides: new Map(), titleRules: [], excluded: new Set() };
+  const s = applyOverrides({ id: 'e', title: '示範觀摩交流活動', official_url: 'u', ai_fields: fields }, none);
+  assert.equal(s.period_text, '活動時間 2026/10/21（三）13:30–16:30');
+  assert.deepEqual(s.tags, ['活動']);
+  assert.equal(s.amount_text, '免費參加');
+});
