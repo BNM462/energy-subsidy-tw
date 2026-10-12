@@ -66,6 +66,9 @@ export function numbersFromSource(fieldText, sourceNumbers) {
   return numbersIn(fieldText).every((n) => sourceNumbers.has(n) || sourceNumbers.has(String(+n)));
 }
 
+// 一般性行政規定，對判斷「能不能申請」沒有幫助，不列入補助對象
+const GENERIC_RULE = /不予補助之?情形|未獲其他補助|未曾獲得其他|重複申請|重複補助/;
+
 const str = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
 const list = (v, n, max) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
 
@@ -83,7 +86,10 @@ export function sanitizeFields(raw, sourceText) {
     summary: keep('summary', str(raw?.summary, 160)),
     amount_text: keep('amount_text', str(raw?.amount_text, 80)),
     amount_details: list(raw?.amount_details, 8, 120).map((x) => keep('amount_details', x)).filter(Boolean),
-    target_points: list(raw?.target_points, 6, 100).map((x) => keep('target_points', x)).filter(Boolean),
+    target_points: list(raw?.target_points, 6, 100)
+      .filter((x) => !GENERIC_RULE.test(x))
+      .map((x) => keep('target_points', x))
+      .filter(Boolean),
   };
   // 金額明細的數字有錯時，連同卡片上的最高補助一起不採用（避免只剩部分正確的金額資訊）
   if (dropped.some((d) => d.startsWith('amount_details'))) {
