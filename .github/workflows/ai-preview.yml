@@ -1,0 +1,30 @@
+name: AI 整理試跑
+
+# 手動執行：輸入官方公告網址，查看 AI 會如何整理卡片內容（不寫入網站資料）
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: '官方公告網址（多個請以空白分隔）'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --omit=dev --ignore-scripts
+      - name: AI 整理試跑
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          AI_PREVIEW_URLS: ${{ inputs.urls }}
+        run: node crawler/ai-preview.mjs

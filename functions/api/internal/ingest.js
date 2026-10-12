@@ -7,6 +7,7 @@ const SUB_COLS = [
   'deadline_text', 'until_quota', 'status_flag', 'target', 'target_types', 'amount_text', 'amount_details', 'summary',
   'content', 'official_url', 'source_urls', 'attachments', 'signals', 'doc_no', 'program_name', 'link_status',
   'content_hash', 'first_seen_at', 'updated_at', 'hidden', 'delegate', 'period_varies', 'period_text', 'purchase_text',
+  'ai_fields', 'ai_hash',
 ];
 const JSON_COLS = new Set(['target_types', 'amount_details', 'source_urls', 'attachments', 'signals']);
 
@@ -53,7 +54,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   for (const s of body.upserts) {
-    const values = SUB_COLS.map((c) => (JSON_COLS.has(c) ? JSON.stringify(s[c] ?? []) : c === 'until_quota' || c === 'hidden' || c === 'period_varies' ? (s[c] ? 1 : 0) : s[c] ?? null));
+    const values = SUB_COLS.map((c) => (c === 'ai_fields' ? (s.ai_fields ? JSON.stringify(s.ai_fields) : null) : JSON_COLS.has(c) ? JSON.stringify(s[c] ?? []) : c === 'until_quota' || c === 'hidden' || c === 'period_varies' ? (s[c] ? 1 : 0) : s[c] ?? null));
     const updates = SUB_COLS.filter((c) => c !== 'id' && c !== 'first_seen_at').map((c) => `${c} = excluded.${c}`);
     // 去重鍵若已被另一筆補助使用（例如舊年度資料），自動加上編號後綴，避免整批寫入失敗
     const placeholders = SUB_COLS.map((c, i) =>

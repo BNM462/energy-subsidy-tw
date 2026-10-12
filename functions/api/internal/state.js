@@ -8,6 +8,11 @@ const JSON_COLS = ['target_types', 'amount_details', 'source_urls', 'attachments
 function parse(row) {
   const out = { ...row, until_quota: !!row.until_quota };
   delete out.views; // 瀏覽次數由網站自行累計，爬蟲不碰
+  try {
+    out.ai_fields = row.ai_fields ? JSON.parse(row.ai_fields) : null;
+  } catch {
+    out.ai_fields = null;
+  }
   for (const c of JSON_COLS) {
     try {
       out[c] = JSON.parse(row[c] || '[]');

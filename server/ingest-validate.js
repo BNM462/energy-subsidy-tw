@@ -87,6 +87,20 @@ export function validateSubsidy(s) {
     period_varies: !!s.period_varies,
     period_text: str(s.period_text, 120),
     purchase_text: str(s.purchase_text, 120),
+    ai_fields: aiFields(s.ai_fields),
+    ai_hash: str(s.ai_hash, 64),
+  };
+}
+
+function aiFields(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  return {
+    summary: str(v.summary, 160),
+    amount_text: str(v.amount_text, 80),
+    amount_details: strArray(v.amount_details, 8, 120),
+    target_points: strArray(v.target_points, 6, 100),
+    model: str(v.model, 60),
+    at: str(v.at, 40),
   };
 }
 

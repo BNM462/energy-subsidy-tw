@@ -14,6 +14,7 @@ import { documentText, filenameFromDisposition } from './lib/docs.mjs';
 import { dedupeKey, idFromKey, findMatch, sha1 } from './lib/dedupe.mjs';
 import { normalizeText, toAdYear, extractBatches, pickBatch } from './lib/dates.mjs';
 import { taipeiYear } from '../public/js/logic.js';
+import { attachmentsText, pageWithDocsText } from './lib/source-text.mjs';
 
 // 擷取規則有改時調高版本，下次掃描會重新整理所有已知頁面
 const EXTRACTOR_VERSION = '10';
@@ -24,6 +25,7 @@ const RETRY_ERROR_MS = 2 * HOUR;
 const DISCOVERY_MS = 24 * HOUR;
 const MAX_DETAIL_PER_RUN = 150;
 const MAX_BACKFILL_PAGES = 6;
+const MAX_AI_PER_RUN = 3;
 const DEAD_AFTER_FAILS = 3;
 const TIME_BUDGET_MS = 17 * 60e3;
 
@@ -94,20 +96,6 @@ function pickTitle(listTitle, main) {
   return t || main.heading || main.pageTitle;
 }
 
-async function attachmentsText(attachments) {
-  let text = '';
-  for (const a of attachments.slice(0, 3)) {
-    try {
-      const r = await fetchResource(a.url, { binary: true });
-      const name = filenameFromDisposition(r.disposition) || a.label;
-      text += (await documentText(r.bytes, { contentType: r.contentType, name })) + '\n';
-    } catch {
-      /* 附件讀取失敗不影響主要內容 */
-    }
-  }
-  return text;
-}
-
 // 重點監測計畫：從頁面上依名稱找出官方說明文件（附件換新版本時，網址改變也能自動找到）
 const DOC_HINT = /須知|要點|公告|簡章|懶人包|說明|Q&A|問答|辦法|作業規定|申請資料/i;
 const DOC_SKIP = /切結|範例|報名表|申請表|表格|選拔|成果|海報|簡報|議程|名單/;
@@ -132,6 +120,31 @@ async function programDocsText(program, main) {
     return DOC_HINT.test(a.label) && !DOC_SKIP.test(a.label);
   });
   return { pagesText, docText: await attachmentsText(docs.slice(0, 4)), docCount: docs.length };
+}
+
+// 該欄位是否已有人工整理（人工修正檔或重點監測計畫）；依名稱套用的金額只算核對過的年度
+function manualField(s, field) {
+  const sets = [];
+  for (const pg of programsCfg) if (pg.pages[0] === s.official_url || (s.source_urls || []).includes(pg.pages[0])) sets.push(pg.fields || {});
+  for (const o of overridesCfg) {
+    if (!o?.target || !o.set) continue;
+    if (o.target.startsWith('title:')) {
+      if (!new RegExp(o.target.slice(6)).test(s.title || '')) continue;
+      if (field.startsWith('amount') && o.set.amount_year != null && o.set.amount_year !== s.year) continue;
+      sets.push(o.set);
+    } else if (o.target === s.id || o.target === s.official_url || (s.source_urls || []).includes(o.target)) sets.push(o.set);
+  }
+  return sets.some((x) => field in x);
+}
+
+// 交給 AI 整理用的官方全文：公告頁面＋說明文件附件
+async function fullSourceText(s) {
+  if (!s.official_url || s.official_url.includes('#row-')) return s.content || '';
+  try {
+    return await pageWithDocsText(s.official_url);
+  } catch {
+    return s.content || '';
+  }
 }
 
 async function loadDetail(url, row) {
@@ -528,6 +541,42 @@ async function main() {
     return sub && sub.year >= year;
   });
 
+  // AI 整理：新補助或公告內容變動時，請伺服器（Gemini）依官方全文整理卡片欄位。
+  // 已有人工整理的金額與重點者不需要；每輪最多 MAX_AI_PER_RUN 筆，失敗下輪再試。
+  const aiFilled = [];
+  if (!DRY && process.env.AI_EXTRACT !== '0') {
+    const firstOfYear = `${year}-01-01`;
+    const candidatesAi = [...subsidies.values()].filter(
+      (s) =>
+        !s.hidden &&
+        s.content_hash &&
+        s.ai_hash !== s.content_hash &&
+        (s.year ?? 0) >= year - 1 &&
+        (!s.apply_end || s.apply_end >= firstOfYear) &&
+        !(manualField(s, 'amount_text') && manualField(s, 'summary')),
+    );
+    for (const s of candidatesAi.slice(0, MAX_AI_PER_RUN)) {
+      if (Date.now() - startedMs > TIME_BUDGET_MS) break;
+      try {
+        const text = await fullSourceText(s);
+        const r = await api('/api/internal/ai-extract', { method: 'POST', body: JSON.stringify({ title: s.title, agency: s.agency, text }), signal: AbortSignal.timeout(120000) });
+        if (!r.ok) {
+          log(`AI 整理暫停（${r.reason}）：${s.title}`);
+          if (r.reason === 'daily_cap') break;
+          continue;
+        }
+        const u = { ...s, ai_fields: { ...r.fields, model: r.model, at: nowIso() }, ai_hash: s.content_hash };
+        subsidies.set(s.id, u);
+        upserts.set(s.id, u);
+        dataChanged = true;
+        aiFilled.push({ id: s.id, title: s.title, url: s.official_url, amount_text: r.fields.amount_text, summary: r.fields.summary, dropped: r.dropped });
+        log(`AI 整理完成：${s.title}${r.dropped.length ? `（捨棄 ${r.dropped.length} 項數字對不上原文的內容）` : ''}`);
+      } catch (e) {
+        log(`AI 整理失敗：${s.title}：${e.message}`);
+      }
+    }
+  }
+
   // 安全網：去重鍵在資料庫中必須唯一。若兩筆不同補助算出相同的鍵，後者加上編號後綴，避免整批寫入失敗
   {
     const owner = new Map(); // dedupe_key -> id
@@ -572,7 +621,7 @@ async function main() {
   const failing = sourceResults.filter((s) => s.consecutive_failures >= 6);
   writeFileSync(
     new URL('last-run.json', OUT_DIR),
-    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), program_warnings: programWarnings, watch_hits: currentWatchHits, errors }, null, 2),
+    JSON.stringify({ stats, data_changed: dataChanged, failing_sources: failing.map((s) => ({ agency: s.agency, error: s.error, consecutive_failures: s.consecutive_failures })), program_warnings: programWarnings, watch_hits: currentWatchHits, ai_filled: aiFilled, errors }, null, 2),
   );
 
   if (DRY) {

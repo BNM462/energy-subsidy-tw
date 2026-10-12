@@ -42,6 +42,8 @@ jobs:
           API_BASE: ${{ vars.API_BASE }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
           FORCE_DISCOVERY: ${{ inputs.rediscover && '1' || '0' }}
+          # AI 整理新補助（1＝啟用，0＝暫停）
+          AI_EXTRACT: '0'
         run: node crawler/run.mjs
 
       - name: 來源異常時開立問題單（GitHub 會寄 Email 通知）

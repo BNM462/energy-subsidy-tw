@@ -133,7 +133,7 @@ function card(s) {
     el('dl', { class: 'facts' },
       fact('申請期間', shortPeriod(s), 'f-period'),
       s.amount_unverified
-        ? el('div', { class: 'fact f-amount' }, el('dt', { text: '最高補助' }), el('dd', { class: 'unknown', text: '請見官方公告（尚未人工確認）' }))
+        ? el('div', { class: 'fact f-amount' }, el('dt', { text: '最高補助' }), el('dd', { class: 'unknown', text: '詳見官方公告' }))
         : fact('最高補助', s.amount_text, 'f-amount'),
     ),
     s.purchase_text && el('p', { class: 'purchase' }, el('span', { class: 'who-label', text: '購買期間' }), `${s.purchase_text}（須於此期間購置）`),
@@ -229,7 +229,7 @@ function renderDetail(d, box) {
     d.content && el('details', { class: 'raw' }, el('summary', { text: '查看官方公告原文' }), el('div', { class: 'content', text: d.content })),
     d.attachments?.length && section('官方附件', links(d.attachments)),
     d.source_urls?.length > 1 && section('其他官方來源', links(d.source_urls.filter((u) => u !== d.official_url))),
-    el('p', { class: 'small', text: `${d.announce_date ? `公告日期：${formatDate(d.announce_date)}　` : ''}資料編號：${d.id}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}${d.manual ? '　（已人工校正）' : ''}` }),
+    el('p', { class: 'small', text: `${d.announce_date ? `公告日期：${formatDate(d.announce_date)}　` : ''}資料編號：${d.id}　最後更新：${formatDateTime(Date.parse(d.updated_at), false)}` }),
   );
   box.replaceChildren(...parts.filter((x) => x instanceof Node));
 }

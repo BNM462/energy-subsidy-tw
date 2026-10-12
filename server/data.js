@@ -19,6 +19,11 @@ function parseRow(row) {
       out[f] = [];
     }
   }
+  try {
+    out.ai_fields = row.ai_fields ? JSON.parse(row.ai_fields) : null;
+  } catch {
+    out.ai_fields = null;
+  }
   out.until_quota = !!row.until_quota;
   out.period_varies = !!row.period_varies;
   return out;
@@ -62,18 +67,28 @@ export function applyOverrides(sub, { overrides, titleRules = [], excluded }) {
   const merged = byTitle.length || exact ? { ...sub, manual: true } : { ...sub };
   for (const k of OVERRIDABLE) if (k in o) merged[k] = o[k];
   if ('announce_date' in o && /^\d{4}/.test(o.announce_date || '')) merged.year = +o.announce_date.slice(0, 4);
-  // 金額只顯示人工核對過的內容；系統自動擷取的金額不當作事實呈現（不知道就不要猜）
-  if (!('amount_text' in o)) {
+  // 顯示優先順序：人工核對 > AI 依官方全文整理（數字已檢查出自原文）> 規則擷取。
+  // 金額只採用人工或 AI 整理的內容；規則擷取的金額容易誤抓（罰鍰、試算範例），不當作事實呈現。
+  const ai = sub.ai_fields || {};
+  const fromAi = (k) => !(k in o) && (Array.isArray(ai[k]) ? ai[k].length : ai[k]);
+  if (fromAi('summary')) merged.summary = ai.summary;
+  if (fromAi('target_points')) merged.target_points = ai.target_points;
+  if (fromAi('amount_text')) {
+    merged.amount_text = ai.amount_text;
+    merged.amount_details = ai.amount_details || [];
+  } else if (!('amount_text' in o)) {
     merged.amount_text = null;
     merged.amount_details = [];
     merged.amount_unverified = true;
   }
+  delete merged.ai_fields;
+  delete merged.ai_hash;
   return merged.hidden ? null : merged;
 }
 
 const LIST_COLUMNS = `id, title, agency, announce_date, year, apply_start, apply_end, apply_end_time, deadline_text,
   until_quota, status_flag, target, target_types, amount_text, summary, official_url, link_status, delegate,
-  program_name, period_varies, period_text, purchase_text, source_urls, first_seen_at, updated_at, views, hidden`;
+  program_name, period_varies, period_text, purchase_text, source_urls, first_seen_at, updated_at, views, hidden, ai_fields`;
 
 /** 常態／多年期辦理的重點計畫：今年仍在期程內（或期程未明）就顯示 */
 export function ongoingVisible(s, year) {

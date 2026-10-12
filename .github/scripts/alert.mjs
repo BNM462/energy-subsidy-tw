@@ -63,6 +63,16 @@ if ((report.watch_hits || []).length) {
   console.log('已通知關注補助');
 }
 
+if ((report.ai_filled || []).length) {
+  const lines = report.ai_filled.map(
+    (a) =>
+      `- ${a.title}\n  最高補助：${a.amount_text || '（官方全文中找不到，網站顯示「詳見官方公告」）'}\n  補助重點：${a.summary || '（無）'}\n  官方公告：${a.url}\n  資料編號：${a.id}` +
+      (a.dropped?.length ? `\n  已自動捨棄（數字對不上官方原文）：${a.dropped.join('；')}` : ''),
+  );
+  gh('issue', 'create', '--title', '📝 新補助已由 AI 整理上架，請抽空核對', '--body', `${mention}以下補助的「補助重點、最高補助、金額明細、補助對象」由 AI 依官方公告全文整理，並已自動檢查所有數字都出自官方原文：\n\n${lines.join('\n\n')}\n\n如發現錯誤，請告訴 AI 助手「資料編號」與正確內容，人工修正會優先於 AI 整理。看完可直接關閉此問題單。`);
+  console.log('已通知 AI 整理結果');
+}
+
 if (problems.length) {
   const body = [
     `${mention}自動檢查發現以下問題（其他來源與既有資料不受影響，網站仍正常運作）：`,

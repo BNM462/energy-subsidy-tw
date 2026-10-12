@@ -78,7 +78,7 @@ export function buildContext(subsidies, now = Date.now(), question = '') {
       s.deadline_text ? `期限原文：${s.deadline_text}` : null,
       `適用對象類別：${categoriesOf(s).join("、") || UNKNOWN}`,
       `補助對象：${s.target_points?.length ? s.target_points.join('；') : s.target || UNKNOWN}`,
-      `補助金額：${s.amount_unverified ? '尚未人工確認，請民眾查閱官方公告（不可自行推測金額）' : s.amount_text || UNKNOWN}`,
+      `補助金額：${s.amount_unverified ? '本站未整理出金額，請民眾查閱官方公告（不可自行推測金額）' : s.amount_text || UNKNOWN}`,
       !s.amount_unverified && s.amount_details?.length > 1 ? `金額明細：${s.amount_details.join('；')}` : null,
       `補助內容：${(s.summary || UNKNOWN).slice(0, 320)}`,
       `官方網址：${s.official_url}`,
@@ -113,17 +113,28 @@ export function cleanQuestion(q) {
  * 呼叫 Gemini。回傳 { ok, text } 或 { ok:false, reason }；任何錯誤都不丟出，前台顯示暫時無法使用。
  */
 export async function askGemini(env, question, contextText, { fetchImpl = fetch } = {}) {
+  // 補助資料放在系統指示中（使用者無法修改），使用者訊息只放問題
+  return callGemini(env, {
+    system: `${SYSTEM}\n\n回答步驟：先逐筆檢查下方【本站補助資料】中與問題相關的補助（看補助對象、補助內容、狀態、期間），找到就列出補助名稱、重點與官方網址；全部都不相關時才回答找不到。\n\n【本站補助資料】\n${contextText}\n【資料結束】`,
+    user: question,
+    fetchImpl,
+  });
+}
+
+/** 呼叫 Gemini（小幫手與公告整理共用）。schema 有值時要求回傳 JSON。 */
+export async function callGemini(env, { system, user, schema = null, maxOutputTokens = 2048, fetchImpl = fetch }) {
   const key = env.GEMINI_API_KEY;
   if (!key) return { ok: false, reason: 'no_key' };
   const models = [env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL].filter(Boolean);
   if (!models.length) return { ok: false, reason: 'no_model' };
-  // 補助資料放在系統指示中（使用者無法修改），使用者訊息只放問題
   const body = {
-    systemInstruction: {
-      parts: [{ text: `${SYSTEM}\n\n回答步驟：先逐筆檢查下方【本站補助資料】中與問題相關的補助（看補助對象、補助內容、狀態、期間），找到就列出補助名稱、重點與官方網址；全部都不相關時才回答找不到。\n\n【本站補助資料】\n${contextText}\n【資料結束】` }],
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens,
+      ...(schema ? { responseMimeType: 'application/json', responseSchema: schema } : {}),
     },
-    contents: [{ role: 'user', parts: [{ text: question }] }],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
   };
   // 主要模型忙碌（503／429／500）時先稍候重試一次，再改用備用模型
   const attempts = models.flatMap((m, i) => (i === 0 ? [m, m] : [m]));
