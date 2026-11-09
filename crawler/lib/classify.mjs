@@ -8,7 +8,7 @@ export const SUBSIDY_TITLE = /補助|獎勵|補貼|獎補助|補捐助|受理申
 
 // 明顯不是補助公告
 export const NEGATIVE_TITLE =
-  /徵才|職缺|錄取|甄選結果|甄試|招標|決標|標案|採購|得標|補助名單|核定名單|獲補助|審查結果|評選結果|得獎|頒獎|表揚|標竿獎|研討會|研習|講習|座談|訓練課程|成果發表|成果分享|分享會|觀摩會|成果|新聞澄清|稅式支出|躉購費率|調訓|職務代理人|誠徵|招募|成果展|核定結果|受補助單位名單|名單|入選|代售|出版品|徵求意見|預告|專區$|核定專區|業務揭露|計畫構想書|科技專案|土地|標售|出租|租賃|公聽會|說明會|活動花絮|插畫|徵文|攝影|試算|立即申請|申請系統|系統登入|會員登入/;
+  /徵才|職缺|錄取|甄選結果|甄試|招標|決標|標案|採購|得標|補助名單|核定名單|獲補助|審查結果|評選結果|得獎|頒獎|表揚|標竿獎|研討會|研習|講習|座談|訓練課程|成果發表|成果分享|分享會|觀摩會|成果|新聞澄清|稅式支出|躉購費率|調訓|職務代理人|誠徵|招募|成果展|核定結果|受補助單位名單|名單|入選|代售|出版品|徵求意見|預告|專區$|核定專區|業務揭露|計畫構想書|科技專案|土地|標售|出租|租賃|公聽會|說明會|活動花絮|插畫|徵文|攝影|試算|立即申請|申請系統|系統登入|會員登入|通車|動土|落成|啟用典禮/;
 
 // 實質節能／能源效率內容（每個詞組視為一個獨立訊號）
 export const ENERGY_TERMS = [
@@ -20,7 +20,8 @@ export const ENERGY_TERMS = [
   ['設備汰換', /汰換|汰舊換新|老舊設備/],
   ['空調', /空調|冷氣|冰水主機|冷凍空調|箱型冷氣|冷卻水塔/],
   ['照明', /照明|LED|燈具/],
-  ['馬達動力', /馬達|電動機|空壓機|空氣壓縮機|泵浦|風機|變頻|動力與公用設備|動力及公用設備/],
+  // 電動機（馬達）不可誤中「電動機車」
+  ['馬達動力', /馬達|電動機(?!車)|空壓機|空氣壓縮機|泵浦|風機|變頻|動力與公用設備|動力及公用設備/],
   ['鍋爐熱泵', /鍋爐|熱泵|熱水器/],
   ['ESCO', /ESCO|節能服務業|節能績效保證|能源技術服務/],
   ['能源管理', /能源管理系統|EMS|能源管理|能源查核|節能診斷|智慧能源管理/],
@@ -51,6 +52,17 @@ export function titleWorthFetching(title) {
 // 核心節能詞：內文判定時至少要有一個（避免只因「照明」「綠建築」等附帶字眼誤判）
 const CORE = new Set(['節能', '節約能源', '能源效率', '節電', 'ESCO', '能源管理', '深度節能', '廢熱回收', '高效率設備']);
 
+// 內文判定時，公告須看得出可以申請（排除只是報導補助成果的新聞稿）
+const APPLICATION_TERMS = /申請|受理|徵求|徵件|須知|要點|計畫書/;
+
+// 核心節能詞出現的總次數（只順帶提到一次，不足以判定為節能補助）
+function coreMentions(text) {
+  return ENERGY_TERMS.filter(([name]) => CORE.has(name)).reduce(
+    (total, [, re]) => total + (text.match(new RegExp(re.source, 'g')) || []).length,
+    0,
+  );
+}
+
 /**
  * 以標題＋內文判斷。回傳 { isSubsidy, reason, signals }
  */
@@ -61,16 +73,25 @@ export function classify({ title, text }) {
   if (!SUBSIDY_TITLE.test(t)) return { isSubsidy: false, reason: '非補助公告', signals: [] };
   const titleSignals = energySignals(t);
   // 「節能減碳」是公文常見套語，內文判定時不單獨計入
-  const bodySignals = energySignals(body.replace(/推動節能減碳|節能減碳政策|節能減碳/g, ''));
+  const bodyForSignals = body.replace(/推動節能減碳|節能減碳政策|節能減碳/g, '');
+  const bodySignals = energySignals(bodyForSignals);
   const signals = [...new Set([...titleSignals, ...bodySignals])];
+  const coreInTitle = titleSignals.some((s) => CORE.has(s));
+  const coreCount = coreMentions(bodyForSignals);
 
-  // 標題有節能訊號，或內文有 2 種以上訊號且含核心節能詞
-  const strong = titleSignals.length >= 1 || (bodySignals.length >= 2 && bodySignals.some((s) => CORE.has(s)));
+  // 收錄條件（任一）：
+  // 1. 標題有核心節能詞
+  // 2. 標題只有設備類訊號（汰換、空調等），內文至少提到一次核心節能詞
+  // 3. 標題沒有訊號，內文有 2 種以上訊號、核心節能詞至少 2 次，且看得出可以申請
+  const strong =
+    coreInTitle ||
+    (titleSignals.length >= 1 && coreCount >= 1) ||
+    (bodySignals.length >= 2 && coreCount >= 2 && APPLICATION_TERMS.test(t + body));
   if (!strong) {
     return { isSubsidy: false, reason: EXCLUDE_ONLY.test(t + body) ? '僅再生能源／減碳等，無實質節能內容' : '無節能相關內容', signals };
   }
-  // 標題本身是再生能源等主題，且標題沒有任何節能訊號 → 需要內文有更多節能證據
-  if (EXCLUDE_ONLY.test(t) && titleSignals.length === 0 && bodySignals.length < 3) {
+  // 標題本身是再生能源、電動車等主題，且標題沒有核心節能詞 → 需要內文有更多節能證據
+  if (EXCLUDE_ONLY.test(t) && !coreInTitle && coreCount < 3) {
     return { isSubsidy: false, reason: '僅再生能源／減碳等，無實質節能內容', signals };
   }
   return { isSubsidy: true, reason: '含節能／能源效率內容', signals };
