@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  computeStatus, isNew, hotInfo, daysLeft, sortSubsidies, taipeiDate, taipeiYear, formatDateTime, periodText, deadlineMs,
+  computeStatus, isNew, hotInfo, daysLeft, sortSubsidies, taipeiDate, taipeiYear, formatDateTime, periodText, deadlineMs, carriedOverLabel,
 } from '../public/js/logic.js';
 
 // 以台灣時間建立時間點
@@ -12,6 +12,13 @@ test('伺服器為 UTC 時仍以台灣日期判斷', () => {
   const now = Date.parse('2026-09-30T16:30:00Z');
   assert.equal(taipeiDate(now), '2026-10-01');
   assert.equal(formatDateTime(now), '2026/10/01 00:30:00');
+});
+
+test('去年公告的標籤：受理中才顯示「今年仍受理」，已截止不顯示', () => {
+  const sub = { carried_over: true, year: 2025, apply_start: '2025-03-10', apply_end: '2026-01-15' };
+  assert.equal(carriedOverLabel(sub, tw('2026-01-10T12:00:00')), '2025 年公告・今年仍受理');
+  assert.equal(carriedOverLabel(sub, tw('2026-11-09T12:00:00')), null);
+  assert.equal(carriedOverLabel({ ...sub, carried_over: false }, tw('2026-01-10T12:00:00')), null);
 });
 
 test('跨年度切換', () => {

@@ -1,6 +1,6 @@
 import {
   computeStatus, isNew, hotInfo, sortSubsidies, formatDate, formatDateTime, taipeiDate, periodText, UNKNOWN,
-  CATEGORIES, categoriesOf, displayTitle, titleTags, targetPoints,
+  CATEGORIES, categoriesOf, displayTitle, titleTags, targetPoints, carriedOverLabel,
 } from './logic.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -125,7 +125,7 @@ function card(s) {
       fresh && el('span', { class: 'badge b-new', text: 'NEW' }),
       hot && el('span', { class: 'badge b-hot', text: `🔥 即將截止・${hot.text}` }),
       s.link_status === 'dead' && el('span', { class: 'badge b-dead', text: '官方連結已失效' }),
-      s.carried_over && el('span', { class: 'badge b-carry', text: `${s.year} 年公告・今年仍受理` }),
+      carriedOverLabel(s, t) && el('span', { class: 'badge b-carry', text: carriedOverLabel(s, t) }),
       s.ongoing && el('span', { class: 'badge b-carry', text: '常態辦理' }),
     ),
     el('h2', { text: displayTitle(s) }),

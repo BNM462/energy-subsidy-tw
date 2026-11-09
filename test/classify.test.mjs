@@ -23,6 +23,17 @@ test('真實誤判：「電動機車」不是「電動機」（馬達）', () =>
   assert.equal(classify({ title: '電動機車汰舊換新補助', text }).isSubsidy, false);
 });
 
+test('真實誤判：核定名單與研究計畫不是可申請的節能補助', () => {
+  const list = '116年度「節能績效保證專案示範推廣補助計畫」受補助單位與補助金額上限';
+  assert.equal(titleWorthFetching(list), false);
+  assert.equal(classify({ title: list, text: list }).isSubsidy, false);
+  const research = '114年度「補助溫室氣體減量管理及氣候變遷調適研究發展計畫」';
+  assert.equal(titleWorthFetching(research), false);
+  assert.equal(classify({ title: research, text: '受理申請。節約能源、提升能源效率、製程節能。' }).isSubsidy, false);
+  // 「研究所」是機關名稱，不可被研究計畫規則擋下
+  assert.ok(classify({ title: '內政部建築研究所公告建築能效改善補助計畫', text: '' }).isSubsidy);
+});
+
 test('真正的節能補助仍要收錄', () => {
   // 標題沒有節能字眼，靠內文判定
   assert.ok(

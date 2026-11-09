@@ -131,6 +131,12 @@ export function hotInfo(sub, now = Date.now()) {
   return { daysLeft: left, text: left === 0 ? '今天截止' : `剩餘 ${left} 天` };
 }
 
+/** 去年公告、今年仍受理的標籤；已截止就不再顯示，否則回傳 null */
+export function carriedOverLabel(sub, now = Date.now()) {
+  if (!sub.carried_over || computeStatus(sub, now).key === 'closed') return null;
+  return `${sub.year} 年公告・今年仍受理`;
+}
+
 const GROUP = { new: 0, open: 1, upcoming: 2, unknown: 3, closed: 4 };
 
 /** 依規格排序：近 7 天新公告 → 申請中 → 尚未開始 →（期程未明）→ 已截止 */
